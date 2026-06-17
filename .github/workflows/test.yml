@@ -1,0 +1,17 @@
+name: test
+
+on:
+  pull_request:
+  push:
+
+jobs:
+
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Placeholder test
+        run: |
+          echo "No tests yet"
