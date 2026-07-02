@@ -1,9 +1,9 @@
 {
-  "id": 17798427,
+  "id": 17842690,
   "name": "main-protection",
   "target": "branch",
   "source_type": "Repository",
-  "source": "Solierrr/ai-assistant",
+  "source": "Solierrr",
   "enforcement": "active",
   "conditions": {
     "ref_name": {
@@ -30,9 +30,8 @@
         "require_last_push_approval": false,
         "required_review_thread_resolution": false,
         "allowed_merge_methods": [
-          "merge",
           "squash",
-          "rebase"
+          "merge"
         ]
       }
     },
@@ -44,23 +43,17 @@
       }
     },
     {
-      "type": "required_status_checks",
-      "parameters": {
-        "strict_required_status_checks_policy": true,
-        "do_not_enforce_on_create": true,
-        "required_status_checks": [
-          {
-            "context": "test"
-          }
-        ]
-      }
-    },
-    {
       "type": "code_quality",
       "parameters": {
         "severity": "errors"
       }
     }
   ],
-  "bypass_actors": []
+  "bypass_actors": [
+    {
+      "actor_id": null,
+      "actor_type": "OrganizationAdmin",
+      "bypass_mode": "pull_request"
+    }
+  ]
 }
