@@ -16,6 +16,6 @@
 
 ## Como validar
 
-[preencha-me]
+[preencha-me] | Sem validação necessária
 
 Closes #
