@@ -513,4 +513,120 @@ CREATE TABLE IF NOT EXISTS service_contract (
 );
 
 
+DO $$ BEGIN
+    CREATE TYPE audit_operation AS ENUM ('INSERT', 'UPDATE', 'DELETE');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+ 
+CREATE TABLE IF NOT EXISTS audit_log (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    table_name text NOT NULL,
+    operation audit_operation NOT NULL,
+    row_id uuid NOT NULL,
+    old_data jsonb,
+    new_data jsonb,
+    changed_by uuid,
+    changed_at timestamptz NOT NULL DEFAULT now()
+);
+ 
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_table_row ON audit_log (table_name, row_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_changed_at ON audit_log (changed_at);
+ 
+
+CREATE OR REPLACE FUNCTION fn_current_app_user()
+RETURNS uuid
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+    v_user_id text;
+BEGIN
+    v_user_id := current_setting('app.current_user_id', true);
+ 
+    IF v_user_id IS NULL OR v_user_id = '' THEN
+        RETURN NULL;
+    END IF;
+ 
+    RETURN v_user_id::uuid;
+EXCEPTION WHEN others THEN
+    RETURN NULL;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION fn_audit_trigger()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_row_id uuid;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        v_row_id := OLD.id;
+    ELSE
+        v_row_id := NEW.id;
+    END IF;
+ 
+    IF TG_OP = 'UPDATE' AND to_jsonb(OLD) = to_jsonb(NEW) THEN
+        RETURN NEW;
+    END IF;
+ 
+    INSERT INTO audit_log (table_name, operation, row_id, old_data, new_data, changed_by)
+    VALUES (
+        TG_TABLE_NAME,
+        TG_OP::audit_operation,
+        v_row_id,
+        CASE WHEN TG_OP IN ('UPDATE', 'DELETE') THEN to_jsonb(OLD) ELSE NULL END,
+        CASE WHEN TG_OP IN ('INSERT', 'UPDATE') THEN to_jsonb(NEW) ELSE NULL END,
+        fn_current_app_user()
+    );
+ 
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$;
+
+
+DO $$
+DECLARE
+    tbl record;
+BEGIN
+    FOR tbl IN
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_type = 'BASE TABLE'
+          AND table_name NOT IN ('audit_log')
+    LOOP
+        EXECUTE format(
+            'DROP TRIGGER IF EXISTS trg_audit_%1$s ON %1$I;
+             CREATE TRIGGER trg_audit_%1$s
+             AFTER INSERT OR UPDATE OR DELETE ON %1$I
+             FOR EACH ROW EXECUTE FUNCTION fn_audit_trigger();',
+            tbl.table_name
+        );
+    END LOOP;
+END $$;
+ 
+
+CREATE OR REPLACE PROCEDURE sp_purge_audit_log(retention_days integer DEFAULT 365)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF retention_days <= 0 THEN
+        RAISE EXCEPTION 'retention_days deve ser maior que zero, recebido: %', retention_days;
+    END IF;
+ 
+    DELETE FROM audit_log
+    WHERE changed_at < now() - (retention_days || ' days')::interval;
+ 
+    RAISE NOTICE 'audit_log: entradas com mais de % dias foram removidas.', retention_days;
+END;
+$$;
+
+
 COMMIT;

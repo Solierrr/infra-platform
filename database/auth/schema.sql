@@ -139,4 +139,54 @@ CREATE TABLE IF NOT EXISTS two_factor (
         ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
+
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$;
+
+
+CREATE TRIGGER trg_user_account_updated_at
+BEFORE UPDATE
+ON user_account
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER trg_profile_updated_at
+BEFORE UPDATE
+ON profile
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+
+CREATE OR REPLACE PROCEDURE clean_expired_data()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+    DELETE FROM session
+    WHERE fk_refresh_token IN (
+        SELECT id
+        FROM refresh_token
+        WHERE expires_at < now()
+           OR revoked = true
+    );
+
+    DELETE FROM refresh_token
+    WHERE expires_at < now()
+       OR revoked = true;
+
+    DELETE FROM token
+    WHERE expires_at < now()
+       OR used = true;
+
+END;
+$$;
+
+
 COMMIT;
