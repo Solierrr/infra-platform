@@ -1,0 +1,127 @@
+Table usuario [headercolor: #175e7a] {
+	id uuid [ pk ]
+	email varchar(120) [ not null, unique ]
+	senha_hash text [ not null ]
+	ativado boolean [ not null, default: true ]
+	trancado boolean [ not null, default: false ]
+	ultimo_login timestamp
+	criado_em timestamp [ not null ]
+	atualizado_em timestamp [ not null ]
+}
+
+Table endereco [headercolor: #175e7a] {
+	id uuid [ pk ]
+	estado varchar(2) [ not null ]
+	cidade text [ not null ]
+	bairro text [ not null ]
+	cep varchar(8) [ not null ]
+	logradouro text [ not null ]
+	numero varchar(10) [ not null ]
+}
+
+Table geolocalizacao [headercolor: #175e7a] {
+	id uuid [ pk ]
+	fk_endereco uuid [ not null, unique ]
+	latitude varchar(20) [ not null ]
+	longitude varchar(20) [ not null ]
+}
+
+Table perfil [headercolor: #175e7a] {
+	id uuid [ pk ]
+	fk_usuario uuid [ not null, unique ]
+	fk_endereco uuid
+	cpf varchar(11) [ not null, unique ]
+	nome varchar(120) [ not null ]
+	telefone varchar(20)
+	dt_nascimento date [ not null ]
+	avatar text
+	criado_em timestamp [ not null ]
+	atualizado_em timestamp [ not null ]
+}
+
+Table token [headercolor: #175e7a] {
+	id uuid [ pk ]
+	fk_usuario uuid [ not null ]
+	token varchar(255) [ not null, unique ]
+	tipo varchar(30) [ not null ]
+	expira_em timestamp [ not null ]
+	utilizado boolean [ not null, default: false ]
+	criado_em timestamp [ not null ]
+}
+
+Table refresh_token [headercolor: #175e7a] {
+	id uuid [ pk ]
+	fk_usuario uuid [ not null ]
+	token text [ not null, unique ]
+	revogado boolean [ not null, default: false ]
+	expira_em timestamp [ not null ]
+	criado_em timestamp [ not null ]
+}
+
+Table sessao [headercolor: #175e7a] {
+	id uuid [ pk ]
+	fk_usuario uuid [ not null ]
+	fk_refresh_token uuid [ not null ]
+	ip varchar(45)
+	user_agent text
+	dispositivo text
+	revogado boolean [ not null, default: false ]
+	criado_em timestamp [ not null ]
+	ultimo_acesso timestamp
+}
+
+Table oauth_account [headercolor: #175e7a] {
+	id uuid [ pk ]
+	fk_usuario uuid [ not null ]
+	provedor varchar(20) [ not null ]
+	provedor_usuario_id varchar(200) [ not null ]
+	criado_em timestamp [ not null ]
+}
+
+Table two_factor [headercolor: #175e7a] {
+	id uuid [ pk ]
+	fk_usuario uuid [ not null ]
+	secret text [ not null ]
+	ativado boolean [ not null, default: false ]
+	backup_codes text
+	algoritmo varchar(20) [ default: 'SHA1' ]
+	digits smallint [ default: 6 ]
+	period smallint [ default: 30 ]
+	criado_em timestamp [ not null ]
+}
+
+Ref "" {
+	perfil.fk_usuario - usuario.id [ delete: no action, update: no action ]
+}
+
+Ref "" {
+	perfil.fk_endereco > endereco.id [ delete: no action, update: no action ]
+}
+
+Ref "" {
+	geolocalizacao.fk_endereco - endereco.id [ delete: no action, update: no action ]
+}
+
+Ref "" {
+	token.fk_usuario > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref "" {
+	refresh_token.fk_usuario > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref "" {
+	sessao.fk_usuario > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref "" {
+	sessao.fk_refresh_token > refresh_token.id [ delete: no action, update: no action ]
+}
+
+Ref "" {
+	oauth_account.fk_usuario > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref "" {
+	two_factor.fk_usuario > usuario.id [ delete: no action, update: no action ]
+}
