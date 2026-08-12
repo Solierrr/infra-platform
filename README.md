@@ -5,7 +5,11 @@ Repositório central de padronização e infraestrutura da organização Solierr
 ## Estrutura
 
 - `database/` — schemas SQL, triggers e diagramas (dbml) dos bancos Postgres e Mongo usados pelos serviços.
-- `github/pr_templates/` — templates de pull request por tipo de repositório (`ai`, `backend`, `frontend`, `mobile`, `infra`).
+- `github/templates/` — templates de pull request por tipo de repositório (`ai`, `backend`, `frontend`, `mobile`, `infra`), copiados para `.github/pull_request_template.md` de cada repositório.
+- `github/gitignore/` — templates de `.gitignore` por preocupação, para combinar conforme a stack de cada repositório:
+  - `ide.gitignore` — editores e SOs, presente em praticamente todo repositório.
+  - `python.gitignore`, `node.gitignore`, `java.gitignore` (Java/Kotlin + Maven), `android.gitignore` (Kotlin/Gradle + Jetpack Compose) — por stack.
+  - `terraform.gitignore` — para repositórios de infraestrutura como código.
 - `github/rulesets/` — rulesets de branch protection e CI exportados do GitHub.
 - `github/workflow/` — workflows de CI/CD reutilizáveis por stack, replicados para `.github/workflows/` de cada repositório:
   - `python/` — FastAPI (pytest + ruff + SonarQube).
@@ -18,6 +22,8 @@ Repositório central de padronização e infraestrutura da organização Solierr
 - `templates/` — arquivos padrão de repositório para copiar em novos projetos:
   - `.editorconfig`, `.gitattributes` — genéricos, para qualquer stack.
   - `docker/<stack>/` — `Dockerfile` e `.dockerignore` de referência por stack (`python`, `jvm-maven` para Java/Kotlin+SpringBoot, `typescript`).
+  - `env/` — `.env.example` de referência: `java.env.example` (serviços Spring Boot) e `generic.env.example` (demais stacks). Copiar para `.env.example` e preencher conforme as variáveis reais do serviço forem existindo.
+  - `sonar/<stack>/sonar-project.properties` — referência por stack (`java`, `kotlin/springboot`, `kotlin/jetpack-compose`, `python`, `typescript`), mesma organização de `github/workflow/`. Copiar para a raiz do repo e substituir `<repo>` pelo nome real (`sonar.projectKey=Solierrr_<repo>`).
 
 ## Convenções usadas nos repositórios da org
 
