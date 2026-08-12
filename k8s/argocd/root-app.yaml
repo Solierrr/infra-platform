@@ -1,0 +1,24 @@
+# The only manifest applied by hand (kubectl apply -f root-app.yaml), once,
+# during bootstrap. It points ArgoCD at k8s/argocd/apps/ - every Application
+# in that folder gets picked up and synced automatically. To add/remove a
+# service from the cluster later: add/remove its *-app.yaml file there and
+# commit. Nothing else needs a manual kubectl command again.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Solierrr/infra-platform.git
+    targetRevision: main
+    path: k8s/argocd/apps
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
