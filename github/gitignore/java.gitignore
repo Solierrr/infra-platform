@@ -1,0 +1,39 @@
+# Compiled class files / packages
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+# Gradle
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Kotlin
+.kotlin/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs / crash dumps
+*.log
+hs_err_pid*
+replay_pid*
+
+# HELP.md (gerado pelo Spring Initializr)
+HELP.md
