@@ -1,0 +1,30 @@
+# NOTE: ai-assistant's Dockerfile has no CMD/ENTRYPOINT and main.py is
+# currently an interactive CLI loop, not an HTTP server. The overlay is
+# ready, but the container will exit immediately until the repo adds an
+# actual server entrypoint. See ../../README.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: solierrr
+
+resources:
+  - ../../base/api-python
+
+namePrefix: ai-assistant-
+
+labels:
+  - pairs:
+      app: ai-assistant
+      app.kubernetes.io/part-of: solierrr
+    includeSelectors: true
+
+images:
+  - name: placeholder/placeholder
+    newName: SEU_USUARIO_DOCKERHUB/solierrr-ai-assistant
+    newTag: latest
+
+patches:
+  - path: patch-env.yaml
+    target:
+      kind: Deployment
+      name: app
