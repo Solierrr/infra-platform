@@ -1,0 +1,25 @@
+# NOTE: api-recommendation's repo has requirements.txt for a Python/FastAPI
+# + Neo4j app, but no actual source code, and its Dockerfile is a leftover
+# copy of the Java template (won't build). This overlay assumes the intended
+# Python stack (port 8000) - it will need the real Dockerfile/code before
+# this deploys successfully. See ../../README.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: solierrr
+
+resources:
+  - ../../base/api-python
+
+namePrefix: api-recommendation-
+
+labels:
+  - pairs:
+      app: api-recommendation
+      app.kubernetes.io/part-of: solierrr
+    includeSelectors: true
+
+images:
+  - name: placeholder/placeholder
+    newName: SEU_USUARIO_DOCKERHUB/solierrr-api-recommendation
+    newTag: latest
