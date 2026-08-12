@@ -1,0 +1,32 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Local configuration (SDK path, etc.)
+local.properties
+
+# Android Studio / build outputs
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+output-metadata.json
+
+# Kotlin
+.kotlin/
+
+# Keystores
+*.jks
+*.keystore
+
+# Google Services
+google-services.json
+
+# Profiling
+*.hprof
+
+# Logs
+*.log
