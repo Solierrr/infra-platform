@@ -96,5 +96,16 @@ resource "helm_release" "kong" {
     file("${path.module}/../infra-gateway/helm/values-dev.yaml"),
   ]
 
+  # Override just for this study cluster, so the proxy gets a public IP
+  # instead of needing kubectl port-forward. Kept out of values-dev.yaml on
+  # purpose - that file documents ClusterIP as the intended default for a
+  # real dev environment.
+  set = [
+    {
+      name  = "proxy.type"
+      value = "LoadBalancer"
+    }
+  ]
+
   depends_on = [google_container_node_pool.primary_nodes]
 }
