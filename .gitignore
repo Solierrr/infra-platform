@@ -39,8 +39,11 @@
 # SonarQube
 .sonar/
 
-# Claude Code
+# AI-assisted development artifacts - must never be pushed
+.sdd
 .claude/
+docs/specs
+specs
 
 # Fleet
 .fleet/

@@ -78,3 +78,23 @@ resource "helm_release" "argocd" {
 
   depends_on = [google_container_node_pool.primary_nodes]
 }
+
+resource "helm_release" "kong" {
+  name             = "kong"
+  repository       = "https://charts.konghq.com"
+  chart            = "kong"
+  version          = "3.4.1" # Kong 3.9.3 (pinned via values-base.yaml image.tag)
+  namespace        = "solier-dev"
+  create_namespace = true
+
+  # Values live in the infra-gateway repo (deploy-time config for that
+  # service, same reasoning as everything else under services/ in
+  # infra-gitops) - assumes it's checked out as a sibling directory, which
+  # is a local-machine convenience, not something CI could rely on.
+  values = [
+    file("${path.module}/../infra-gateway/helm/values-base.yaml"),
+    file("${path.module}/../infra-gateway/helm/values-dev.yaml"),
+  ]
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
