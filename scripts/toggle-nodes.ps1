@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
-  Scales the GKE node pool up or down by changing node_count in main.tf,
-  and pushes that change through git (branch, commit, PR, merge) so
-  Terraform's state never drifts from what's actually applied.
+  Aumenta ou reduz a escala do pool de nós do GKE alterando o `node_count` no `main.tf`
+  e propaga essa alteração via git (branch, commit, PR, merge), de modo que
+  o estado do Terraform nunca divirja do que está efetivamente aplicado.
 
 .EXAMPLE
   ./scripts/toggle-nodes.ps1 -NodeCount 0
@@ -31,14 +31,15 @@ $action = if ($NodeCount -eq 0) { "pause" } else { "resume" }
 $branch = "chore/scale-nodes-to-$NodeCount-$(Get-Date -Format 'yyyyMMddHHmmss')"
 git checkout -b $branch
 
-(Get-Content main.tf) -replace '  node_count = \d+', "  node_count = $NodeCount" |
-    Set-Content main.tf -Encoding utf8NoBOM
+$mainTfPath = (Resolve-Path main.tf).Path
+$content = (Get-Content $mainTfPath -Raw) -replace 'node_count = \d+', "node_count = $NodeCount"
+[System.IO.File]::WriteAllText($mainTfPath, $content, (New-Object System.Text.UTF8Encoding($false)))
 
 git add main.tf
 git commit -m "chore: $action node pool (node_count = $NodeCount)"
 git push -u origin $branch
 
-$title = "[AUTO] chore: scale node pool to $NodeCount"
+$title = "`[AUTO]` chore: scale node pool to $NodeCount"
 $body = @"
 ## Objetivo
 
