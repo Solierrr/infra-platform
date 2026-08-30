@@ -67,3 +67,14 @@ resource "google_container_node_pool" "primary_nodes" {
     ]
   }
 }
+
+resource "helm_release" "argocd" {
+  name             = "argocd"
+  repository       = "https://argoproj.github.io/argo-helm"
+  chart            = "argo-cd"
+  version          = "10.4.2" # ArgoCD v3.5.2
+  namespace        = "argocd"
+  create_namespace = true
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
