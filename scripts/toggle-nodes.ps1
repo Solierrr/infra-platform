@@ -6,12 +6,9 @@
 
 .EXAMPLE
   ./scripts/toggle-nodes.ps1 -NodeCount 0
-  Opens and merges a PR pausing the node pool. Run `terraform apply`
-  yourself afterwards - this script never touches the cloud directly.
 
 .EXAMPLE
   ./scripts/toggle-nodes.ps1 -NodeCount 2 -Apply
-  Same, but also runs `terraform apply -auto-approve` at the end.
 #>
 param(
     [Parameter(Mandatory = $true)]
@@ -41,11 +38,32 @@ git add main.tf
 git commit -m "chore: $action node pool (node_count = $NodeCount)"
 git push -u origin $branch
 
-$prUrl = gh pr create `
-    --title "chore: scale node pool to $NodeCount" `
-    --body "Ajuste de node_count para $action o cluster entre sessoes de estudo. Sem mudanca de infra alem da contagem de nodes."
-Write-Host "PR: $prUrl"
+$title = "[AUTO] chore: scale node pool to $NodeCount"
+$body = @"
+## Objetivo
 
+$(if ($NodeCount -eq 0) { "Pausar o cluster entre sessoes de estudo - zera custo de node/disco sem derrubar o control plane nem o IP do Kong." } else { "Retomar o cluster para uma sessao de estudo." })
+
+## Alteracoes
+
+- ``node_count`` do node pool: ``$NodeCount``
+
+## Recursos impactados
+
+Cluster GKE ``solaria-gke`` - essa PR sozinha nao aplica nada na nuvem, precisa de ``terraform apply`` depois (feito automaticamente se o script rodou com ``-Apply``).
+
+## Rollback
+
+Rodar o script de novo com o valor anterior de ``node_count``.
+
+## Como validar
+
+``kubectl get nodes`` mostra $NodeCount node(s) depois do apply.
+
+Closes #
+"@
+
+$prUrl = gh pr create --title $title --body $body
 $prNumber = ($prUrl -split '/')[-1]
 gh pr merge $prNumber --merge --admin
 
@@ -54,7 +72,10 @@ git pull origin main
 
 if ($Apply) {
     terraform apply -auto-approve
-} else {
-    Write-Host ""
+}
+
+Write-Host ""
+Write-Host "PR: $prUrl" -ForegroundColor Cyan
+if (-not $Apply) {
     Write-Host "Merged. Run 'terraform apply' to actually apply it." -ForegroundColor Yellow
 }
