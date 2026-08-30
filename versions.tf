@@ -18,9 +18,6 @@ provider "google" {
   region  = var.gcp_region
 }
 
-# Used to authenticate the helm provider against the GKE cluster below,
-# reusing the same identity Terraform is already running as (no separate
-# service account key needed).
 data "google_client_config" "default" {}
 
 provider "helm" {
