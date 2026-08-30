@@ -76,6 +76,29 @@ resource "helm_release" "argocd" {
   namespace        = "argocd"
   create_namespace = true
 
+  # Exposed through Kong at a sslip.io hostname (no real domain yet) instead
+  # of kubectl port-forward. server.insecure makes argocd-server listen on
+  # plain HTTP internally - required for a plain (non-passthrough) Ingress,
+  # since we're not doing TLS at all yet.
+  set = [
+    {
+      name  = "configs.params.server\\.insecure"
+      value = "true"
+    },
+    {
+      name  = "server.ingress.enabled"
+      value = "true"
+    },
+    {
+      name  = "server.ingress.ingressClassName"
+      value = "kong"
+    },
+    {
+      name  = "server.ingress.hostname"
+      value = "argocd.34.39.151.199.sslip.io"
+    },
+  ]
+
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
