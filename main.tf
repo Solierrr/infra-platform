@@ -26,6 +26,28 @@ resource "google_container_cluster" "primary" {
   # Lets `terraform destroy` actually delete the cluster; the provider
   # defaults to protecting clusters from deletion otherwise.
   deletion_protection = false
+
+  # Explicit about what gets shipped to Cloud Logging - the provider default
+  # only covers SYSTEM_COMPONENTS, silently leaving out application logs.
+  logging_config {
+    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
+  }
+
+  # Nodes/endpoint stay public (no Cloud NAT cost), but explicit rather than
+  # relying on the provider's implicit default.
+  private_cluster_config {
+    enable_private_nodes    = false
+    enable_private_endpoint = false
+  }
+
+  # Public endpoint, but only reachable from this IP - avoids the cost of a
+  # fully private cluster while still closing the "anyone can reach it" gap.
+  master_authorized_networks_config {
+    cidr_blocks {
+      cidr_block   = "177.62.27.116/32"
+      display_name = "study-machine"
+    }
+  }
 }
 
 resource "google_container_node_pool" "primary_nodes" {
