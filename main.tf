@@ -79,6 +79,10 @@ resource "helm_release" "argocd" {
       value = "kong"
     },
     {
+      # STALE after the us-central1 migration - this was the old Kong IP in
+      # southamerica-east1. Kong gets a new public IP in the new region;
+      # update this (and the web-app Ingress in infra-gitops) once that IP
+      # is known, in a follow-up PR.
       name  = "server.ingress.hostname"
       value = "argocd.34.39.151.199.sslip.io"
     },
