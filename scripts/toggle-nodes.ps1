@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Aumenta ou reduz a escala do pool de nós do GKE alterando o `node_count` no `main.tf`
   e propaga essa alteração via git (branch, commit, PR, merge), de modo que
@@ -35,6 +35,13 @@ $mainTfPath = (Resolve-Path main.tf).Path
 $content = (Get-Content $mainTfPath -Raw) -replace 'node_count = \d+', "node_count = $NodeCount"
 [System.IO.File]::WriteAllText($mainTfPath, $content, (New-Object System.Text.UTF8Encoding($false)))
 
+if (-not (git status --porcelain)) {
+    Write-Host "node_count já está em $NodeCount - nada pra commitar, sem PR." -ForegroundColor Yellow
+    git checkout main
+    git branch -D $branch | Out-Null
+    exit 0
+}
+
 git add main.tf
 git commit -m "chore: $action node pool (node_count = $NodeCount)"
 git push -u origin $branch
@@ -43,15 +50,15 @@ $title = "`[AUTO]` chore: scale node pool to $NodeCount"
 $body = @"
 ## Objetivo
 
-$(if ($NodeCount -eq 0) { "Pausar o cluster entre sessoes de estudo - zera custo de node/disco sem derrubar o control plane nem o IP do Kong." } else { "Retomar o cluster para uma sessao de estudo." })
+$(if ($NodeCount -eq 0) { "Pausar o cluster entre sessões de estudo - zera custo de node/disco sem derrubar o control plane nem o IP do Kong." } else { "Retomar o cluster para uma sessão de estudo." })
 
-## Alteracoes
+## Alterações
 
 - ``node_count`` do node pool: ``$NodeCount``
 
 ## Recursos impactados
 
-Cluster GKE ``solaria-gke`` - essa PR sozinha nao aplica nada na nuvem, precisa de ``terraform apply`` depois (feito automaticamente se o script rodou com ``-Apply``).
+Cluster GKE ``solaria-gke`` - essa PR sozinha não aplica nada na nuvem, precisa de ``terraform apply`` depois (feito automaticamente se o script rodou com ``-Apply``).
 
 ## Rollback
 
