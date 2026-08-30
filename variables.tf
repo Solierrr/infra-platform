@@ -1,17 +1,17 @@
 variable "gcp_project_id" {
   type        = string
-  description = "GCP project where the cluster will be created"
+  description = "GCP project"
   default     = "solaria-authenticator"
 }
 
 variable "gcp_region" {
   type        = string
-  description = "GCP region for regional resources (network, subnetwork)"
+  description = "GCP region"
   default     = "southamerica-east1"
 }
 
 variable "gcp_zone" {
   type        = string
-  description = "GCP zone for the (zonal) GKE cluster and its node pool"
+  description = "GCP zone"
   default     = "southamerica-east1-a"
 }
