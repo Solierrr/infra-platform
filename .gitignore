@@ -36,6 +36,9 @@
 # Visual Studio Code / Cursor
 .cursor/
 
+# SonarQube
+.sonar/
+
 # Claude Code
 .claude/
 
@@ -102,3 +105,6 @@ terraform.rc
 
 # ignore plan files saved before destroying Terraform configuration
 planout
+
+# OCI API private key, if you keep a copy inside this folder
+*.pem
