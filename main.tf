@@ -55,10 +55,10 @@ resource "google_container_node_pool" "primary_nodes" {
   cluster  = google_container_cluster.primary.name
   location = var.gcp_zone
 
-  node_count = 1
+  node_count = 2
 
   node_config {
-    machine_type = "e2-small"
+    machine_type = "e2-medium"
     disk_size_gb = 30
     disk_type    = "pd-standard"
 
