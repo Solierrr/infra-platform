@@ -44,7 +44,7 @@ resource "google_container_node_pool" "primary_nodes" {
   cluster  = google_container_cluster.primary.name
   location = var.gcp_zone
 
-  node_count = 0
+  node_count = 2
 
   node_config {
     machine_type = "e2-medium"
@@ -79,10 +79,6 @@ resource "helm_release" "argocd" {
       value = "kong"
     },
     {
-      # STALE after the us-central1 migration - this was the old Kong IP in
-      # southamerica-east1. Kong gets a new public IP in the new region;
-      # update this (and the web-app Ingress in infra-gitops) once that IP
-      # is known, in a follow-up PR.
       name  = "server.ingress.hostname"
       value = "argocd.34.39.151.199.sslip.io"
     },
@@ -94,15 +90,6 @@ resource "helm_release" "argocd" {
 resource "google_compute_address" "kong_ip" {
   name   = "solaria-kong-ip"
   region = var.gcp_region
-
-  # This resource has its own lifecycle, separate from the cluster/node
-  # pool: `terraform destroy` releases it (stops billing entirely, but the
-  # next `apply` is NOT guaranteed to get this same address back - GCP can
-  # hand it to someone else once released). `node_count = 0` never touches
-  # this resource, so the address - and every sslip.io hostname built on it
-  # - survives pauses. Reserved-but-unattached static IPs cost ~$0.01/hr;
-  # while attached to the Kong Service (even with 0 nodes, since the
-  # Service object itself still exists) it's free.
 }
 
 resource "helm_release" "kong" {
