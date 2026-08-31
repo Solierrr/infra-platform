@@ -91,6 +91,20 @@ resource "helm_release" "argocd" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
+resource "google_compute_address" "kong_ip" {
+  name   = "solaria-kong-ip"
+  region = var.gcp_region
+
+  # This resource has its own lifecycle, separate from the cluster/node
+  # pool: `terraform destroy` releases it (stops billing entirely, but the
+  # next `apply` is NOT guaranteed to get this same address back - GCP can
+  # hand it to someone else once released). `node_count = 0` never touches
+  # this resource, so the address - and every sslip.io hostname built on it
+  # - survives pauses. Reserved-but-unattached static IPs cost ~$0.01/hr;
+  # while attached to the Kong Service (even with 0 nodes, since the
+  # Service object itself still exists) it's free.
+}
+
 resource "helm_release" "kong" {
   name             = "kong"
   repository       = "https://charts.konghq.com"
@@ -108,6 +122,10 @@ resource "helm_release" "kong" {
     {
       name  = "proxy.type"
       value = "LoadBalancer"
+    },
+    {
+      name  = "proxy.loadBalancerIP"
+      value = google_compute_address.kong_ip.address
     }
   ]
 
