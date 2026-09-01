@@ -20,3 +20,34 @@ $env:TF_VAR_acme_email = '<email-aqui>'
 
 # Connection string do MongoDB usado pelo api-messenger
 $env:TF_VAR_api_messenger_mongo_uri = '<connection-string-aqui>'
+
+# --- api-core ---------------------------------------------------------
+
+$env:TF_VAR_api_core_db_url = '<jdbc:postgresql://host:5432/dbname>'
+$env:TF_VAR_api_core_db_username = '<usuario>'
+$env:TF_VAR_api_core_db_password = '<senha>'
+$env:TF_VAR_api_core_redis_url = '<redis://host:6379>'
+$env:TF_VAR_api_core_cloudinary_cloud_name = '<cloud-name>'
+$env:TF_VAR_api_core_cloudinary_api_key = '<api-key>'
+$env:TF_VAR_api_core_cloudinary_api_secret = '<api-secret>'
+$env:TF_VAR_api_core_google_translate_api_key = '<api-key>'
+
+# --- api-auth ----------------------------------------------------------
+
+$env:TF_VAR_api_auth_db_url = '<jdbc:postgresql://host:5432/dbname>'
+$env:TF_VAR_api_auth_db_username = '<usuario>'
+$env:TF_VAR_api_auth_db_password = '<senha>'
+$env:TF_VAR_api_auth_redis_host = '<host-do-redis>'
+# porta já tem default 6379 no variables.tf, só defina se for diferente
+# $env:TF_VAR_api_auth_redis_port = "6379"
+$env:TF_VAR_api_auth_jwt_keystore_password = '<senha-do-keystore>'
+$env:TF_VAR_api_auth_jwt_active_kid = '<kid-ativo>'
+
+# Caminho local do arquivo keystore.p12 do JWT - o script converte pra base64
+# sozinho, você só precisa apontar pro arquivo
+$jwtKeystorePath = '<caminho\para\seu\keystore.p12>'
+if (Test-Path $jwtKeystorePath) {
+    $env:TF_VAR_api_auth_jwt_keystore_base64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($jwtKeystorePath))
+} else {
+    Write-Warning "jwtKeystorePath nao encontrado ('$jwtKeystorePath') - edite a variavel acima antes de rodar terraform apply"
+}

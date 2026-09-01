@@ -7,7 +7,7 @@ variable "gcp_project_id" {
 variable "gcp_region" {
   type        = string
   description = "Região do cluster GCP"
-  default = "us-central1"
+  default     = "us-central1"
 }
 
 variable "gcp_zone" {
