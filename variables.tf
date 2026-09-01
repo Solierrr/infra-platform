@@ -21,3 +21,14 @@ variable "authorized_ip_cidr" {
   description = "IP público (formato CIDR, ex: 1.2.3.4/32) autorizado a acessar o control plane do GKE. Muda conforme a rede/máquina de quem roda o apply"
   default     = "189.57.250.90/32"
 }
+
+variable "cloudflare_api_token" {
+  type        = string
+  description = "Token da API do Cloudflare (permissão Zone:DNS:Edit na zona solaria.com) usado pelo cert-manager no desafio DNS-01"
+  sensitive   = true
+}
+
+variable "acme_email" {
+  type        = string
+  description = "E-mail usado para registrar a conta ACME no Let's Encrypt (avisos de expiração de certificado)"
+}

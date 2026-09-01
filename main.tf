@@ -121,8 +121,92 @@ resource "helm_release" "kong" {
     {
       name  = "proxy.loadBalancerIP"
       value = google_compute_address.kong_ip.address
-    }
+    },
+    {
+      name  = "proxy.tls.enabled"
+      value = "true"
+    },
   ]
 
   depends_on = [google_container_node_pool.primary_nodes]
+}
+
+resource "helm_release" "cert_manager" {
+  name             = "cert-manager"
+  repository       = "https://charts.jetstack.io"
+  chart            = "cert-manager"
+  version          = "v1.16.2"
+  namespace        = "cert-manager"
+  create_namespace = true
+
+  set = [
+    {
+      name  = "crds.enabled"
+      value = "true"
+    },
+  ]
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+resource "kubernetes_secret" "cloudflare_api_token" {
+  metadata {
+    name      = "cloudflare-api-token"
+    namespace = "cert-manager"
+  }
+
+  data = {
+    api-token = var.cloudflare_api_token
+  }
+
+  type = "Opaque"
+
+  depends_on = [helm_release.cert_manager]
+}
+
+resource "kubectl_manifest" "letsencrypt_prod_issuer" {
+  yaml_body = <<-YAML
+    apiVersion: cert-manager.io/v1
+    kind: ClusterIssuer
+    metadata:
+      name: letsencrypt-prod
+    spec:
+      acme:
+        server: https://acme-v02.api.letsencrypt.org/directory
+        email: ${var.acme_email}
+        privateKeySecretRef:
+          name: letsencrypt-prod-account-key
+        solvers:
+          - dns01:
+              cloudflare:
+                apiTokenSecretRef:
+                  name: cloudflare-api-token
+                  key: api-token
+  YAML
+
+  depends_on = [helm_release.cert_manager, kubernetes_secret.cloudflare_api_token]
+}
+
+resource "kubectl_manifest" "letsencrypt_http01_issuer" {
+  # Provisório: usado enquanto o domínio é um subdomínio gratuito (is-a.dev) sem
+  # zona própria no Cloudflare. Quando trocar por domínio comprado, volta a usar
+  # o letsencrypt_prod_issuer (DNS-01) e apaga este.
+  yaml_body = <<-YAML
+    apiVersion: cert-manager.io/v1
+    kind: ClusterIssuer
+    metadata:
+      name: letsencrypt-prod-http01
+    spec:
+      acme:
+        server: https://acme-v02.api.letsencrypt.org/directory
+        email: ${var.acme_email}
+        privateKeySecretRef:
+          name: letsencrypt-prod-http01-account-key
+        solvers:
+          - http01:
+              ingress:
+                ingressClassName: kong
+  YAML
+
+  depends_on = [helm_release.cert_manager]
 }
