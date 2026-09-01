@@ -92,6 +92,14 @@ resource "google_compute_address" "kong_ip" {
   region = var.gcp_region
 }
 
+data "http" "kong_values_base" {
+  url = "https://raw.githubusercontent.com/Solierrr/infra-gateway/main/helm/values-base.yaml"
+}
+
+data "http" "kong_values_dev" {
+  url = "https://raw.githubusercontent.com/Solierrr/infra-gateway/main/helm/values-dev.yaml"
+}
+
 resource "helm_release" "kong" {
   name             = "kong"
   repository       = "https://charts.konghq.com"
@@ -101,8 +109,8 @@ resource "helm_release" "kong" {
   create_namespace = true
 
   values = [
-    file("${path.module}/../infra-gateway/helm/values-base.yaml"),
-    file("${path.module}/../infra-gateway/helm/values-dev.yaml"),
+    data.http.kong_values_base.response_body,
+    data.http.kong_values_dev.response_body,
   ]
 
   set = [
