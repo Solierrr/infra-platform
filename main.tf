@@ -80,7 +80,7 @@ resource "helm_release" "argocd" {
     },
     {
       name  = "server.ingress.hostname"
-      value = "argocd.34.39.151.199.sslip.io"
+      value = "argocd.${google_compute_address.kong_ip.address}.sslip.io"
     },
   ]
 
