@@ -44,7 +44,7 @@ resource "google_container_node_pool" "primary_nodes" {
   cluster  = google_container_cluster.primary.name
   location = var.gcp_zone
 
-  node_count = 2
+  node_count = 4
 
   node_config {
     machine_type = "e2-medium"
@@ -89,7 +89,6 @@ resource "helm_release" "argocd" {
     {
       name  = "configs.secret.argocdServerAdminPasswordMtime"
       value = "2026-09-01T00:00:00Z"
-      # data fixa: só precisa mudar aqui se a senha for trocada de novo
     },
   ]
 
@@ -197,9 +196,6 @@ resource "kubectl_manifest" "letsencrypt_prod_issuer" {
 }
 
 resource "kubectl_manifest" "letsencrypt_http01_issuer" {
-  # Provisório: usado enquanto o domínio é um subdomínio gratuito (is-a.dev) sem
-  # zona própria no Cloudflare. Quando trocar por domínio comprado, volta a usar
-  # o letsencrypt_prod_issuer (DNS-01) e apaga este.
   yaml_body = <<-YAML
     apiVersion: cert-manager.io/v1
     kind: ClusterIssuer
