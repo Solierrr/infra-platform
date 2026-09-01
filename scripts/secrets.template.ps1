@@ -1,6 +1,7 @@
-# Copie este arquivo para secrets.local.ps1 (já está no .gitignore) e preencha
-# os valores reais. Depois, antes de rodar terraform apply, execute:
-#   . .\secrets.local.ps1
+# Copie este arquivo para scripts/secrets.local.ps1 (já está no .gitignore) e
+# preencha os valores reais. Depois, antes de rodar terraform apply, execute
+# (a partir da raiz do repo):
+#   . .\scripts\secrets.local.ps1
 # (o ponto no início carrega as variáveis na sessão atual do PowerShell)
 
 # IP público autorizado a acessar o control plane do GKE (opcional - já tem
