@@ -33,7 +33,7 @@ resource "google_container_cluster" "primary" {
 
   master_authorized_networks_config {
     cidr_blocks {
-      cidr_block   = "177.62.27.116/32"
+      cidr_block   = var.authorized_ip_cidr
       display_name = "solaria-machine"
     }
   }

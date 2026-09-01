@@ -15,3 +15,9 @@ variable "gcp_zone" {
   description = "Zona do cluster GCP"
   default     = "us-central1-a"
 }
+
+variable "authorized_ip_cidr" {
+  type        = string
+  description = "IP público (formato CIDR, ex: 1.2.3.4/32) autorizado a acessar o control plane do GKE. Muda conforme a rede/máquina de quem roda o apply"
+  default     = "189.57.250.90/32"
+}
