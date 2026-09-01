@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+secrets.local.ps1
 
 # VS Code
 .vscode/
