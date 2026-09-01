@@ -1,17 +1,17 @@
 variable "gcp_project_id" {
   type        = string
-  description = "GCP project"
+  description = "Projeto GCP && Firebase"
   default     = "solaria-authenticator"
 }
 
 variable "gcp_region" {
   type        = string
-  description = "GCP region"
+  description = "Região do cluster GCP"
   default = "us-central1"
 }
 
 variable "gcp_zone" {
   type        = string
-  description = "GCP zone"
+  description = "Zona do cluster GCP"
   default     = "us-central1-a"
 }
