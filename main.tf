@@ -82,6 +82,15 @@ resource "helm_release" "argocd" {
       name  = "server.ingress.hostname"
       value = "argocd.${google_compute_address.kong_ip.address}.sslip.io"
     },
+    {
+      name  = "configs.secret.argocdServerAdminPassword"
+      value = var.argocd_admin_password_hash
+    },
+    {
+      name  = "configs.secret.argocdServerAdminPasswordMtime"
+      value = "2026-09-01T00:00:00Z"
+      # data fixa: só precisa mudar aqui se a senha for trocada de novo
+    },
   ]
 
   depends_on = [google_container_node_pool.primary_nodes]

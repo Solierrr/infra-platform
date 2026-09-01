@@ -22,6 +22,12 @@ variable "authorized_ip_cidr" {
   default     = "189.57.250.90/32"
 }
 
+variable "argocd_admin_password_hash" {
+  type        = string
+  description = "Hash bcrypt da senha fixa do admin do ArgoCD (gere localmente com bcrypt, nunca a senha em texto puro)"
+  sensitive   = true
+}
+
 variable "cloudflare_api_token" {
   type        = string
   description = "Token da API do Cloudflare (permissão Zone:DNS:Edit na zona solaria.com) usado pelo cert-manager no desafio DNS-01"
