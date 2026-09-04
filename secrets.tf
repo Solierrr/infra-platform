@@ -123,13 +123,13 @@ resource "kubernetes_secret" "api_auth_jwt_keystore" {
 
 # --- api-recommendation ----------------------------------------------------
 # Reusa /database (Postgres somente-leitura + Neo4j) e soma a pasta
-# residual /api-recommendation (chaves de API que não são credencial de
-# nenhuma tecnologia compartilhada).
+# /recommendation (chaves de API do motor de recomendação, não são
+# credencial de nenhuma tecnologia compartilhada).
 
-data "infisical_secrets" "api_recommendation" {
+data "infisical_secrets" "recommendation" {
   env_slug     = "prod"
   workspace_id = var.infisical_project_id
-  folder_path  = "/api-recommendation"
+  folder_path  = "/recommendation"
 }
 
 resource "kubernetes_secret" "api_recommendation" {
@@ -140,7 +140,7 @@ resource "kubernetes_secret" "api_recommendation" {
 
   data = merge(
     { for name, secret in data.infisical_secrets.database.secrets : name => secret.value },
-    { for name, secret in data.infisical_secrets.api_recommendation.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.recommendation.secrets : name => secret.value },
   )
 
   type = "Opaque"
@@ -149,13 +149,13 @@ resource "kubernetes_secret" "api_recommendation" {
 }
 
 # --- api-mcp (api-database-mcp) --------------------------------------------
-# Reusa /database (Postgres "Negócio") e soma a pasta residual /api-mcp
-# (chave de API própria do serviço).
+# Reusa /database (Postgres "Negócio") e soma a pasta /mcp (chave de API
+# própria do serviço).
 
-data "infisical_secrets" "api_mcp" {
+data "infisical_secrets" "mcp" {
   env_slug     = "prod"
   workspace_id = var.infisical_project_id
-  folder_path  = "/api-mcp"
+  folder_path  = "/mcp"
 }
 
 resource "kubernetes_secret" "api_mcp" {
@@ -170,7 +170,7 @@ resource "kubernetes_secret" "api_mcp" {
       name => secret.value
       if contains(["DB_POSTGRES_HOST", "DB_POSTGRES_PORT", "DB_POSTGRES_USER", "DB_POSTGRES_PASSWORD", "DB_POSTGRES_BUSINESS"], name)
     },
-    { for name, secret in data.infisical_secrets.api_mcp.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.mcp.secrets : name => secret.value },
   )
 
   type = "Opaque"
