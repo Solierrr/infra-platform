@@ -147,3 +147,95 @@ resource "kubernetes_secret" "api_recommendation" {
 
   depends_on = [google_container_node_pool.primary_nodes]
 }
+
+# --- api-mcp (api-database-mcp) --------------------------------------------
+# Reusa /database (Postgres "Negócio") e soma a pasta residual /api-mcp
+# (chave de API própria do serviço).
+
+data "infisical_secrets" "api_mcp" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/api-mcp"
+}
+
+resource "kubernetes_secret" "api_mcp" {
+  metadata {
+    name      = "api-mcp-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      for name, secret in data.infisical_secrets.database.secrets :
+      name => secret.value
+      if contains(["DB_POSTGRES_HOST", "DB_POSTGRES_PORT", "DB_POSTGRES_USER", "DB_POSTGRES_PASSWORD", "DB_POSTGRES_BUSINESS"], name)
+    },
+    { for name, secret in data.infisical_secrets.api_mcp.secrets : name => secret.value },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+# --- ai-assistant -----------------------------------------------------------
+# Mongo (checkpointer de curto prazo), Redis próprio dos agentes (Upstash) e
+# chaves de LLM.
+
+data "infisical_secrets" "llm" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/llm"
+}
+
+resource "kubernetes_secret" "ai_assistant" {
+  metadata {
+    name      = "ai-assistant-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      for name, secret in data.infisical_secrets.database.secrets :
+      name => secret.value
+      if contains(["DB_MONGO_URI", "DB_MONGO_AGENTS"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.redis.secrets :
+      name => secret.value
+      if contains(["UPSTASH_AGENTS_HOST", "UPSTASH_AGENTS_PORT", "UPSTASH_AGENTS_USERNAME", "UPSTASH_AGENTS_PASSWORD"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.llm.secrets :
+      name => secret.value
+      if contains(["GOOGLE_API_KEY", "GROQ_API_KEY"], name)
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+# --- ai-validation ----------------------------------------------------------
+# Só chaves de LLM, sem banco/cache próprio.
+
+resource "kubernetes_secret" "ai_validation" {
+  metadata {
+    name      = "ai-validation-secrets"
+    namespace = "default"
+  }
+
+  data = { for name, secret in data.infisical_secrets.llm.secrets : name => secret.value }
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+# --- web-app ------------------------------------------------------------
+# Propositalmente sem kubernetes_secret: web-app é uma SPA estática (Vite +
+# nginx) - as VITE_* são embutidas no bundle em build time (npm run build),
+# não lidas em runtime pelo container. A wiring com o Infisical acontece no
+# passo de build da imagem Docker (CI), não aqui no Terraform. Ver Fase 4/5
+# do plano em docs-warehouse/architecture.
