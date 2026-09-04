@@ -23,64 +23,33 @@ resource "kubernetes_secret" "api_messenger" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
-# --- api-core ---------------------------------------------------------
-# TODO: os defaults = "" abaixo são temporários, até os valores reais serem
-# aplicados via TF_VAR. Remover assim que estiverem definidos de verdade.
+# --- api-core -----------------------------------------------------------
+# Secrets lidos do Infisical (env prod), pastas por categoria/tecnologia
+# compartilhadas entre serviços - ver
+# docs-warehouse/architecture/2026-09-03-secrets-and-envs-design.md
 
-variable "api_core_db_url" {
-  type        = string
-  description = "JDBC URL do Postgres usado pelo api-core (spring.datasource.url)"
-  sensitive   = true
-  default     = ""
+data "infisical_secrets" "database" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/database"
 }
 
-variable "api_core_db_username" {
-  type        = string
-  description = "Usuário do Postgres usado pelo api-core"
-  sensitive   = true
-  default     = ""
+data "infisical_secrets" "redis" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/redis"
 }
 
-variable "api_core_db_password" {
-  type        = string
-  description = "Senha do Postgres usado pelo api-core"
-  sensitive   = true
-  default     = ""
+data "infisical_secrets" "cloudinary" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/cloudinary"
 }
 
-variable "api_core_redis_url" {
-  type        = string
-  description = "URL de conexão do Redis usado pelo api-core (spring.data.redis.url)"
-  sensitive   = true
-  default     = ""
-}
-
-variable "api_core_cloudinary_cloud_name" {
-  type        = string
-  description = "Cloud name da conta Cloudinary usada pelo api-core"
-  sensitive   = true
-  default     = ""
-}
-
-variable "api_core_cloudinary_api_key" {
-  type        = string
-  description = "API key da conta Cloudinary usada pelo api-core"
-  sensitive   = true
-  default     = ""
-}
-
-variable "api_core_cloudinary_api_secret" {
-  type        = string
-  description = "API secret da conta Cloudinary usada pelo api-core"
-  sensitive   = true
-  default     = ""
-}
-
-variable "api_core_google_translate_api_key" {
-  type        = string
-  description = "API key do Google Translate usada pelo api-core"
-  sensitive   = true
-  default     = ""
+data "infisical_secrets" "google" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/google"
 }
 
 resource "kubernetes_secret" "api_core" {
@@ -89,16 +58,15 @@ resource "kubernetes_secret" "api_core" {
     namespace = "default"
   }
 
-  data = {
-    DB_URL                   = var.api_core_db_url
-    DB_USERNAME              = var.api_core_db_username
-    DB_PASSWORD              = var.api_core_db_password
-    REDIS_URL                = var.api_core_redis_url
-    CLOUDINARY_CLOUD_NAME    = var.api_core_cloudinary_cloud_name
-    CLOUDINARY_API_KEY       = var.api_core_cloudinary_api_key
-    CLOUDINARY_API_SECRET    = var.api_core_cloudinary_api_secret
-    GOOGLE_TRANSLATE_API_KEY = var.api_core_google_translate_api_key
-  }
+  # Traz junto DB_POSTGRES_AUTH (usado pelo api-auth, não pelo api-core) -
+  # inofensivo, /database é compartilhada entre os dois e o Spring só lê
+  # as chaves que conhece.
+  data = merge(
+    { for name, secret in data.infisical_secrets.database.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.redis.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.cloudinary.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.google.secrets : name => secret.value },
+  )
 
   type = "Opaque"
 
