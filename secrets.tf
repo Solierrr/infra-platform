@@ -52,6 +52,12 @@ data "infisical_secrets" "google" {
   folder_path  = "/google"
 }
 
+data "infisical_secrets" "auth" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/auth"
+}
+
 resource "kubernetes_secret" "api_core" {
   metadata {
     name      = "api-core-secrets"
@@ -73,63 +79,10 @@ resource "kubernetes_secret" "api_core" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
-# --- api-auth ----------------------------------------------------------
-# TODO: os defaults = "" abaixo são temporários, até os valores reais serem
-# aplicados via TF_VAR. Remover assim que estiverem definidos de verdade.
-
-variable "api_auth_db_url" {
-  type        = string
-  description = "JDBC URL do Postgres usado pelo api-auth (spring.datasource.url)"
-  sensitive   = true
-  default     = ""
-}
-
-variable "api_auth_db_username" {
-  type        = string
-  description = "Usuário do Postgres usado pelo api-auth"
-  sensitive   = true
-  default     = ""
-}
-
-variable "api_auth_db_password" {
-  type        = string
-  description = "Senha do Postgres usado pelo api-auth"
-  sensitive   = true
-  default     = ""
-}
-
-variable "api_auth_redis_host" {
-  type        = string
-  description = "Host do Redis usado pela fila de outbox do api-auth"
-  sensitive   = true
-  default     = ""
-}
-
-variable "api_auth_redis_port" {
-  type        = string
-  description = "Porta do Redis usado pela fila de outbox do api-auth"
-  default     = "6379"
-}
-
-variable "api_auth_jwt_keystore_password" {
-  type        = string
-  description = "Senha do keystore PKCS12 com o par de chaves RSA do JWT"
-  sensitive   = true
-  default     = ""
-}
-
-variable "api_auth_jwt_active_kid" {
-  type        = string
-  description = "Kid/alias da chave atualmente usada para assinar novos tokens JWT"
-  default     = ""
-}
-
-variable "api_auth_jwt_keystore_base64" {
-  type        = string
-  description = "Conteúdo do keystore.p12 do JWT, em base64 (o secrets.local.ps1 gera isso a partir de um caminho de arquivo)"
-  sensitive   = true
-  default     = ""
-}
+# --- api-auth -------------------------------------------------------------
+# Secrets lidos do Infisical (env prod) - reusa os data sources /database e
+# /redis já declarados acima (mesma instância Postgres/Upstash do api-core,
+# só muda DB_POSTGRES_AUTH em vez de DB_POSTGRES_CORE) + /auth.
 
 resource "kubernetes_secret" "api_auth" {
   metadata {
@@ -137,15 +90,14 @@ resource "kubernetes_secret" "api_auth" {
     namespace = "default"
   }
 
-  data = {
-    DB_URL                = var.api_auth_db_url
-    DB_USERNAME           = var.api_auth_db_username
-    DB_PASSWORD           = var.api_auth_db_password
-    REDIS_HOST            = var.api_auth_redis_host
-    REDIS_PORT            = var.api_auth_redis_port
-    JWT_KEYSTORE_PASSWORD = var.api_auth_jwt_keystore_password
-    JWT_ACTIVE_KID        = var.api_auth_jwt_active_kid
-  }
+  # Traz junto chaves que o api-auth não usa (DB_POSTGRES_CORE,
+  # UPSTASH_CORE_USERNAME/PASSWORD, SERVICE_JWT_SECRET, etc.) - inofensivo,
+  # as pastas são compartilhadas e o Spring só lê o que conhece.
+  data = merge(
+    { for name, secret in data.infisical_secrets.database.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.redis.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.auth.secrets : name => secret.value },
+  )
 
   type = "Opaque"
 
@@ -159,7 +111,7 @@ resource "kubernetes_secret" "api_auth_jwt_keystore" {
   }
 
   binary_data = {
-    "keystore.p12" = var.api_auth_jwt_keystore_base64
+    "keystore.p12" = data.infisical_secrets.auth.secrets["JWT_KEYSTORE_BASE64"].value
   }
 
   type = "Opaque"
