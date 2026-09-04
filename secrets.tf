@@ -1,29 +1,3 @@
-variable "api_messenger_mongo_uri" {
-  type        = string
-  description = "Connection string do MongoDB usado pelo api-messenger (spring.mongodb.uri)"
-  sensitive   = true
-  # TODO: default temporário até o valor real ser definido via TF_VAR. Remover
-  # o default assim que o secret real for aplicado, pra não deixar Mongo mal
-  # configurado passar despercebido num apply futuro.
-  default = ""
-}
-
-resource "kubernetes_secret" "api_messenger" {
-  metadata {
-    name      = "api-messenger-secrets"
-    namespace = "default"
-  }
-
-  data = {
-    MONGO_URI = var.api_messenger_mongo_uri
-  }
-
-  type = "Opaque"
-
-  depends_on = [google_container_node_pool.primary_nodes]
-}
-
-# --- api-core -----------------------------------------------------------
 # Secrets lidos do Infisical (env prod), pastas por categoria/tecnologia
 # compartilhadas entre serviços - ver
 # docs-warehouse/architecture/2026-09-03-secrets-and-envs-design.md
@@ -33,6 +7,34 @@ data "infisical_secrets" "database" {
   workspace_id = var.infisical_project_id
   folder_path  = "/database"
 }
+
+# --- api-messenger --------------------------------------------------------
+
+resource "kubernetes_secret" "api_messenger" {
+  metadata {
+    name      = "api-messenger-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      for name, secret in data.infisical_secrets.database.secrets :
+      name => secret.value
+      if contains(["DB_MONGO_URI", "DB_MONGO_MESSENGER"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.auth.secrets :
+      name => secret.value
+      if contains(["SERVICE_JWT_SECRET", "SERVICE_CLIENT_SECRET"], name)
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+# --- api-core ---------------------------------------------------------
 
 data "infisical_secrets" "redis" {
   env_slug     = "prod"
