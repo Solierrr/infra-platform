@@ -120,3 +120,30 @@ resource "kubernetes_secret" "api_auth_jwt_keystore" {
 
   depends_on = [google_container_node_pool.primary_nodes]
 }
+
+# --- api-recommendation ----------------------------------------------------
+# Reusa /database (Postgres somente-leitura + Neo4j) e soma a pasta
+# residual /api-recommendation (chaves de API que não são credencial de
+# nenhuma tecnologia compartilhada).
+
+data "infisical_secrets" "api_recommendation" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/api-recommendation"
+}
+
+resource "kubernetes_secret" "api_recommendation" {
+  metadata {
+    name      = "api-recommendation-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    { for name, secret in data.infisical_secrets.database.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.api_recommendation.secrets : name => secret.value },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
