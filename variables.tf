@@ -38,3 +38,21 @@ variable "acme_email" {
   type        = string
   description = "E-mail usado para registrar a conta ACME no Let's Encrypt (avisos de expiração de certificado)"
 }
+
+variable "infisical_client_id" {
+  type        = string
+  description = "Client ID da Machine Identity gke-sync do Infisical (Universal Auth)"
+  sensitive   = true
+}
+
+variable "infisical_client_secret" {
+  type        = string
+  description = "Client Secret da Machine Identity gke-sync do Infisical (Universal Auth)"
+  sensitive   = true
+}
+
+variable "infisical_project_id" {
+  type        = string
+  description = "Workspace ID do projeto Infisical (dashboard do Infisical -> Project Settings)"
+  default     = "2296d19c-5f3b-41e1-afa3-fcde39966a71"
+}
