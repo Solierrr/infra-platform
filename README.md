@@ -1,33 +1,45 @@
 # infra-platform
 
-Repositório central de padronização e infraestrutura da organização Solierrr.
+Este é o repositório que define, via Terraform, a infraestrutura base da organização Solierrr no Google Cloud: a VPC, o cluster GKE, o node pool que sustenta as cargas de trabalho, e a instalação inicial do ArgoCD, do Kong e do cert-manager dentro desse cluster. Diferente de um repositório de aplicação, aqui não existe "build" ou "deploy" no sentido tradicional — o artefato final é o próprio estado da infraestrutura na nuvem, gerenciado pelo state do Terraform. Um ponto central da arquitetura é o conceito de **cluster efêmero**: como o GKE é cobrado por node ativo, o cluster é pensado para subir e ser derrubado sob demanda (fora de sessões de estudo/uso), com um script dedicado para zerar o node pool sem destruir o control plane nem recursos como o IP público do Kong.
 
-## Estrutura
+<p>
 
-- `database/` — schemas SQL, triggers e diagramas (dbml) dos bancos Postgres e Mongo usados pelos serviços.
-- `github/templates/` — templates de pull request por tipo de repositório (`ai`, `backend`, `frontend`, `mobile`, `infra`), copiados para `.github/pull_request_template.md` de cada repositório.
-- `github/gitignore/` — templates de `.gitignore` por preocupação, para combinar conforme a stack de cada repositório:
-  - `ide.gitignore` — editores e SOs, presente em praticamente todo repositório.
-  - `python.gitignore`, `node.gitignore`, `java.gitignore` (Java/Kotlin + Maven), `android.gitignore` (Kotlin/Gradle + Jetpack Compose) — por stack.
-  - `terraform.gitignore` — para repositórios de infraestrutura como código.
-- `github/rulesets/` — rulesets de branch protection e CI exportados do GitHub.
-- `github/workflow/` — workflows de CI/CD reutilizáveis por stack, replicados para `.github/workflows/` de cada repositório:
-  - `python/` — FastAPI (pytest + ruff + SonarQube).
-  - `java/` — Spring Boot em Java, Maven (JUnit/JaCoCo ad-hoc + Checkstyle + SonarQube).
-  - `kotlin/springboot/` — Spring Boot em Kotlin, Maven (JUnit/JaCoCo ad-hoc + ktlint + SonarQube).
-  - `kotlin/jetpack-compose/` — app Android em Kotlin, Gradle (testes unitários + ktlint + SonarQube).
-  - `typescript/` — React/Vite (build + testes + eslint + SonarQube).
+[![License](https://img.shields.io/github/license/Solierrr/infra-platform)](https://github.com/Solierrr/infra-platform/blob/main/LICENSE)
+[![GitHub Last Commit](https://img.shields.io/github/last-commit/Solierrr/infra-platform)](https://github.com/Solierrr/infra-platform/commits)
+[![GitHub Issues](https://img.shields.io/github/issues/Solierrr/infra-platform)](https://github.com/Solierrr/infra-platform/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Solierrr/infra-platform)](https://github.com/Solierrr/infra-platform/pulls)
+[![GitHub Contributors](https://img.shields.io/github/contributors/Solierrr/infra-platform)](https://github.com/Solierrr/infra-platform/graphs/contributors)
+[![Release](https://img.shields.io/github/v/release/Solierrr/infra-platform)](https://github.com/Solierrr/infra-platform/releases)
 
-  Cada stack segue o mesmo padrão de 4 workflows: `ci.yml` (build/testes), `quality.yml` (lint), `sonarqube.yml` (scan disparado após o CI, via `workflow_run`) e `release.yml` (placeholder).
-- `templates/` — arquivos padrão de repositório para copiar em novos projetos:
-  - `.editorconfig`, `.gitattributes` — genéricos, para qualquer stack.
-  - `docker/<stack>/` — `Dockerfile` e `.dockerignore` de referência por stack (`python`, `jvm-maven` para Java/Kotlin+SpringBoot, `typescript`).
-  - `env/` — `.env.example` de referência: `java.env.example` (serviços Spring Boot) e `generic.env.example` (demais stacks). Copiar para `.env.example` e preencher conforme as variáveis reais do serviço forem existindo.
-  - `sonar/<stack>/sonar-project.properties` — referência por stack (`java`, `kotlin/springboot`, `kotlin/jetpack-compose`, `python`, `typescript`), mesma organização de `github/workflow/`. Copiar para a raiz do repo e substituir `<repo>` pelo nome real (`sonar.projectKey=Solierrr_<repo>`).
+</p>
 
-## Convenções usadas nos repositórios da org
+<div align="center">
 
-- Licença MIT, `.gitignore`, `.gitattributes` e `.editorconfig` em todo repositório.
-- SonarQube como gate de qualidade (`sonar-project.properties` na raiz de cada repo, projectKey `Solierrr_<repo>`).
-- Commits em inglês, minúsculo, no formato `tipo: descrição` (`feat`, `fix`, `chore`, `refactor`, `ci`, `test`, `build`...).
-- Branches por tipo de trabalho (`feat/`, `fix/`, `chore/`, `refactor/`...).
+<p>
+  <a href="https://github.com/syvixor/skills-icons">
+    <img src="https://skills.syvixor.com/api/icons?i=terraform,gcp,kubernetes,powershell" height="48" alt="Cloud & Infrastructure">
+  </a>
+</p>
+
+<p>
+
+[![Terraform](https://img.shields.io/badge/Terraform-844FBA?logo=terraform&logoColor=white)](https://www.terraform.io/)
+[![Google Cloud](https://img.shields.io/badge/Google_Cloud-4285F4?logo=googlecloud&logoColor=white)](https://cloud.google.com/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![PowerShell](https://img.shields.io/badge/PowerShell-5391FE?logo=powershell&logoColor=white)](https://learn.microsoft.com/powershell/)
+
+</p>
+
+</div>
+
+## Aprofunde-se no Projeto!
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md), estrutura do repositório e explicação dos recursos definidos em cada arquivo `.tf`.
+- [RUNNING.md](./RUNNING.md), como rodar `terraform plan`/`apply` localmente e usar os scripts PowerShell auxiliares.
+- [DEPLOYMENT.md](https://github.com/Solierrr/docs-warehouse/blob/main/.github/DEPLOYMENT.md), papel deste repositório no fluxo de deploy da organização.
+
+## Contribuindo
+
+- [.github/CONTRIBUTING.md](./.github/CONTRIBUTING.md), convenções de commit, branch e Pull Request.
+- CODE_OF_CONDUCT.md, código de conduta do projeto ({a confirmar}, ainda não existe neste repositório).
+- SECURITY.md, como reportar vulnerabilidades de segurança ({a confirmar}, ainda não existe neste repositório).
