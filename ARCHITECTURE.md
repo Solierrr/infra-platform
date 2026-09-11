@@ -33,7 +33,7 @@ Concentra a ponte entre o vault [Infisical](https://infisical.com) (autenticado 
 ## Papel dos scripts em `scripts/`
 
 - `toggle-nodes.ps1`, automatiza a escala do node pool: edita o `node_count` em `main.tf`, cria uma branch, comita, abre e faz merge de uma PR (`gh pr create` / `gh pr merge --admin`) e, opcionalmente (`-Apply`), roda `terraform apply -auto-approve` — garantindo que o state do Terraform nunca fique divergente do que está de fato aplicado.
-- `secrets.template.ps1`, template para o arquivo local `scripts/secrets.local.ps1` (ignorado pelo `.gitignore`), que exporta as variáveis `TF_VAR_*` consumidas pelo Terraform antes de um `plan`/`apply` — inclui a senha do ArgoCD, o token do Cloudflare, o e-mail do ACME e credenciais por serviço, além da conversão automática de um keystore `.p12` local para base64.
+- `secrets.template.ps1`, template para o arquivo local `scripts/secrets.local.ps1` (ignorado pelo `.gitignore`), que exporta as variáveis `TF_VAR_*` consumidas pelo Terraform antes de um `plan`/`apply` — client ID/secret da Machine Identity `gke-sync` do Infisical (usada por `secrets.tf` pra buscar as credenciais reais de cada serviço em `env=prod`), a senha do ArgoCD, o token do Cloudflare e o e-mail do ACME. Não inclui mais credencial por serviço nem conversão de keystore `.p12` — isso já vem pronto do Infisical (`JWT_KEYSTORE_BASE64` em `/auth`).
 
 ```Tree do Repositório
 ├── .github/
