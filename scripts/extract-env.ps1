@@ -51,6 +51,7 @@ $ServiceFolderMap = @{
     "web-app"            = @("/vite", "/service-urls")
     "google-registry"    = @("/google")
     "databricks-sync"    = @("/database", "/databricks")
+    "database-console"   = @("/database")
 }
 
 if (-not $ServiceFolderMap.ContainsKey($Service)) {
