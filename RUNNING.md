@@ -17,6 +17,31 @@ Este repositório é Terraform (IaC). Não há "servidor de desenvolvimento" —
 - **`gh` (GitHub CLI) autenticado**, necessário apenas para quem for usar `scripts/toggle-nodes.ps1`, já que o script abre e faz merge de Pull Requests automaticamente.
 - **`terraform apply` é uma ação real e cobrada**, ao contrário de rodar uma aplicação localmente, aplicar este Terraform sobe recursos de verdade no Google Cloud (cluster GKE, nodes, IP público) — nunca rode `apply` sem antes revisar o `plan` com atenção.
 
+## Atalhos via Makefile
+
+<p>
+  <a href="https://github.com/syvixor/skills-icons">
+    <img src="https://skills.syvixor.com/api/icons?i=make" height="48" alt="Makefile">
+  </a>
+</p>
+
+O `Makefile` na raiz embrulha os comandos mais usados deste repositório - nenhum deles substitui os passos abaixo, é só conveniência.
+
+```Comandos do Makefile
+make install                             # instala terraform, gcloud sdk, gh, infisical e kubectl via winget
+make login                                # infisical login
+make init                                 # terraform init
+make plan                                 # terraform plan
+make apply                                # terraform apply
+make extract-env ENV=local                # extrai TODAS as pastas mapeadas pra .env
+make extract-env ENV=qa SERVICE=api-core  # extrai só as pastas do serviço informado
+make extract-env ENV=local OUT=.env.local # com caminho de saída customizado
+make toggle-nodes NODES=0                 # zera o node pool (pausa o cluster), abre e mergeia a PR
+make toggle-nodes NODES=2 APPLY=1         # restaura o node pool e já aplica
+```
+
+`scripts/extract-env.ps1` agora checa sozinho, antes de extrair qualquer coisa, se o Infisical CLI está instalado e se há sessão ativa (`infisical login`) - se não estiver, o próprio script recomenda o comando certo em vez de falhar sem explicação.
+
 ## Instalação do Projeto
 
 ### Iniciando o repositório com o Github

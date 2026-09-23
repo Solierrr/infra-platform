@@ -2,9 +2,10 @@
 .SYNOPSIS
   Extrai secrets do Infisical para um arquivo .env local,
   a partir das pastas por categoria que o serviço informado consome.
+  Sem -Service, extrai a uniao de todas as pastas de todos os servicos mapeados.
 
 .PARAMETER Service
-  -s: Nome do serviço.
+  -s: Nome do serviço [Opcional]. Omitido, extrai tudo.
 
 .PARAMETER Environment
   -e: Ambiente do Infisical.
@@ -20,10 +21,13 @@
 
 .EXAMPLE
   ./scripts/extract-env.ps1 -s api-auth -e prod -o .env.prod
+
+.EXAMPLE
+  ./scripts/extract-env.ps1 -e local -o .env.all
 #>
 
 param(
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $false)]
     [Alias("s")]
     [string]$Service,
 
@@ -31,7 +35,7 @@ param(
     [Alias("e")]
     [ValidateSet("local", "qa", "prod")]
     [string]$Environment,
-  
+
     [Parameter(Mandatory = $false)]
     [Alias("o")]
     [string]$OutputPath = ".env"
@@ -54,22 +58,34 @@ $ServiceFolderMap = @{
     "database-console"   = @("/database")
 }
 
-if (-not $ServiceFolderMap.ContainsKey($Service)) {
+if ($Service -and -not $ServiceFolderMap.ContainsKey($Service)) {
     Write-Error "Servico '$Service' não mapeado em `$ServiceFolderMap (topo deste script). Adicione a lista de pastas do Infisical que ele consome antes de rodar."
     exit 1
 }
 
 if (-not (Get-Command infisical -ErrorAction SilentlyContinue)) {
-    Write-Error "Infisical.CLI não configurado. Rode 'winget install infisical' e 'infisical login' antes de usar este script."
+    Write-Error "Infisical CLI não instalado. Rode 'make install' (ou 'winget install infisical.infisical') e depois 'make login' (ou 'infisical login') antes de usar este script."
     exit 1
 }
 
-$lines = [System.Collections.Generic.List[string]]::new()
-$lines.Add("# Gerado por scripts/extract-env.ps1 - Service=$Service Environment=$Environment - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
+& infisical user get token --silent *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Infisical CLI instalado, mas sem sessão ativa. Rode 'make login' (ou 'infisical login') antes de usar este script."
+    exit 1
+}
 
-foreach ($folder in $ServiceFolderMap[$Service]) {
+$folders = if ($Service) { $ServiceFolderMap[$Service] } else {
+    Write-Host "Nenhum -Service informado - extraindo todas as pastas de todos os serviços mapeados." -ForegroundColor Cyan
+    $ServiceFolderMap.Values | ForEach-Object { $_ } | Select-Object -Unique
+}
+$label = if ($Service) { $Service } else { "todos os serviços" }
+
+$lines = [System.Collections.Generic.List[string]]::new()
+$lines.Add("# Gerado por scripts/extract-env.ps1 - Service=$label Environment=$Environment - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
+
+foreach ($folder in $folders) {
     Write-Host "Extraindo $folder (env=$Environment)..." -ForegroundColor Cyan
-    $output = @(& infisical export --env=$Environment --path=$folder --format=dotenv --projectId=$InfisicalProjectId 2>&1)
+    $output = @(& infisical export --env=$Environment --path=$folder --format=dotenv --projectId=$InfisicalProjectId --silent 2>&1)
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Falha ao extrair '$folder': $output"
         exit 1
@@ -84,4 +100,4 @@ foreach ($folder in $ServiceFolderMap[$Service]) {
 
 [System.IO.File]::WriteAllLines($OutputPath, $lines, (New-Object System.Text.UTF8Encoding($false)))
 
-Write-Host "OK: '$OutputPath' gerado com $($ServiceFolderMap[$Service].Count) pasta(s) do Infisical para '$Service' (env=$Environment)." -ForegroundColor Green
+Write-Host "OK: '$OutputPath' gerado com $($folders.Count) pasta(s) do Infisical para '$label' (env=$Environment)." -ForegroundColor Green
