@@ -33,6 +33,7 @@ make login                                # infisical login
 make init                                 # terraform init
 make plan                                 # terraform plan
 make apply                                # terraform apply
+make tools-check                          # confirma a instalação de infra-scripts
 make extract-env ENV=local                # extrai TODAS as pastas mapeadas pra .env
 make extract-env ENV=qa SERVICE=api-core  # extrai só as pastas do serviço informado
 make extract-env ENV=local OUT=.env.local # com caminho de saída customizado
@@ -40,7 +41,7 @@ make toggle-nodes NODES=0                 # zera o node pool (pausa o cluster), 
 make toggle-nodes NODES=2 APPLY=1         # restaura o node pool e já aplica
 ```
 
-`scripts/extract-env.ps1` agora checa sozinho, antes de extrair qualquer coisa, se o Infisical CLI está instalado e se há sessão ativa (`infisical login`) - se não estiver, o próprio script recomenda o comando certo em vez de falhar sem explicação.
+`make extract-env` chama `extract-env.ps1` do repositório compartilhado `Solierrr/infra-scripts`. Instale-o uma vez por máquina em `$HOME/.local/share/solierrr-infra-scripts` e mantenha a atualização explícita com `git -C "$HOME/.local/share/solierrr-infra-scripts" pull --ff-only`. O script checa se o Infisical CLI está instalado e se há sessão ativa (`infisical login`) antes de extrair qualquer valor.
 
 ## Instalação do Projeto
 
