@@ -1,6 +1,6 @@
 # Arquitetura do Repositório
 
-Este repositório segue a arquitetura padrão de um projeto Terraform da organização: um conjunto de arquivos `.tf` na raiz, sem subpastas de módulo, já que o escopo é um único cluster GKE com seus recursos de rede e as instalações Helm/Kubernetes que rodam dentro dele. `main.tf` concentra os recursos de infraestrutura propriamente ditos (rede, cluster, node pool, ArgoCD, Kong, cert-manager e os `ClusterIssuer` do Let's Encrypt), `secrets.tf` concentra exclusivamente a distribuição de segredos de aplicação lidos do Infisical para dentro do cluster, e `variables.tf`/`versions.tf`/`output.tf` cuidam, respectivamente, de parâmetros de entrada, providers/backends e valores expostos após o `apply`. Os scripts em `scripts/` não fazem parte do plano do Terraform em si — são ferramentas PowerShell de apoio ao fluxo local, usadas para escalar o node pool e para carregar segredos como variáveis de ambiente antes de rodar os comandos do Terraform.
+Este repositório segue a arquitetura padrão de um projeto Terraform da organização: um conjunto de arquivos `.tf` na raiz, sem subpastas de módulo, já que o escopo é um único cluster GKE com seus recursos de rede e as instalações Helm/Kubernetes que rodam dentro dele. `main.tf` concentra os recursos de infraestrutura propriamente ditos (rede, cluster, node pool, ArgoCD, Kong, cert-manager e os `ClusterIssuer` do Let's Encrypt), `secrets.tf` concentra exclusivamente a distribuição de segredos de aplicação lidos do Infisical para dentro do cluster, e `variables.tf`/`versions.tf`/`output.tf` cuidam, respectivamente, de parâmetros de entrada, providers/backends e valores expostos após o `apply`. Os scripts em `scripts/` não fazem parte do plano do Terraform em si — são ferramentas PowerShell de apoio específicas da plataforma. O `extract-env` organizacional é fornecido externamente por `Solierrr/infra-scripts`.
 
 <p>
   <a href="https://github.com/syvixor/skills-icons">
@@ -34,6 +34,8 @@ Concentra a ponte entre o vault [Infisical](https://infisical.com) (autenticado 
 
 - `toggle-nodes.ps1`, automatiza a escala do node pool: edita o `node_count` em `main.tf`, cria uma branch, comita, abre e faz merge de uma PR (`gh pr create` / `gh pr merge --admin`) e, opcionalmente (`-Apply`), roda `terraform apply -auto-approve` — garantindo que o state do Terraform nunca fique divergente do que está de fato aplicado.
 - `secrets.template.ps1`, template para o arquivo local `scripts/secrets.local.ps1` (ignorado pelo `.gitignore`), que exporta as variáveis `TF_VAR_*` consumidas pelo Terraform antes de um `plan`/`apply` — client ID/secret da Machine Identity `gke-sync` do Infisical (usada por `secrets.tf` pra buscar as credenciais reais de cada serviço em `env=prod`), a senha do ArgoCD, o token do Cloudflare e o e-mail do ACME. Não inclui mais credencial por serviço nem conversão de keystore `.p12` — isso já vem pronto do Infisical (`JWT_KEYSTORE_BASE64` em `/auth`).
+
+`extract-env.ps1` não pertence a esta pasta: é um utilitário compartilhado em `Solierrr/infra-scripts`, chamado pelo alvo `make extract-env` após `make tools-check` validar sua instalação local.
 
 ```Tree do Repositório
 ├── .github/
