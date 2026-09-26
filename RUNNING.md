@@ -69,9 +69,9 @@ code . -r
   </a>
 </p>
 
-Copie `scripts/secrets.template.ps1` para `scripts/secrets.local.ps1` (já está no `.gitignore`) e preencha o client ID/secret da Machine Identity `gke-sync` do Infisical — é a única credencial que precisa ficar local, o resto o Terraform já lê direto do Infisical.
+`make plan`, `make apply` e `make destroy` chamam `scripts/ensure-secrets.ps1` sozinhos antes de rodar o Terraform: se `scripts/secrets.local.ps1` ainda não existir, o script pergunta o client ID/secret da Machine Identity `gke-sync` do Infisical direto no terminal (dashboard do Infisical → Project Settings → Identities → `gke-sync`) e cria o arquivo (já está no `.gitignore`) — é a única credencial que precisa ficar local, o resto o Terraform já lê direto do Infisical. Nas próximas vezes o arquivo já existe e o passo é pulado. Para trocar as credenciais, apague `scripts/secrets.local.ps1` e rode `make plan`/`apply`/`destroy` de novo.
 
-`make plan`, `make apply` e `make destroy` já carregam `scripts/secrets.local.ps1` sozinhos antes de rodar o Terraform. Só é preciso carregar a variável manualmente na sessão do PowerShell se for rodar `terraform plan`/`apply`/`destroy` direto, sem passar pelo Makefile:
+Se for rodar `terraform plan`/`apply`/`destroy` direto, sem passar pelo Makefile, carregue o arquivo manualmente na sessão do PowerShell (copiando `scripts/secrets.template.ps1` primeiro se ele ainda não existir):
 
 ```Comando para carregar os segredos na sessão manualmente
 . .\scripts\secrets.local.ps1
