@@ -8,9 +8,9 @@
 # "infisical_secrets" por pasta, ver docs-warehouse/architecture), o
 # Terraform não lê mais um TF_VAR_* por credencial - ele busca tudo direto
 # do Infisical (env prod) usando a Machine Identity abaixo, inclusive o
-# hash do admin do ArgoCD, o token da Cloudflare e o e-mail ACME (pasta
-# /infra-platform). Só segue manual aqui a credencial que autentica no
-# próprio Infisical - não dá pra puxar ela de dentro dele mesmo.
+# hash do admin do ArgoCD e o e-mail ACME (pasta /terraform) e o token da
+# Cloudflare (pasta /cloudflare). Só segue manual aqui a credencial que
+# autentica no próprio Infisical - não dá pra puxar ela de dentro dele mesmo.
 
 # IP público autorizado a acessar o control plane do GKE (opcional - já tem
 # default no variables.tf, só precisa definir se sua rede/IP mudou)

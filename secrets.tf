@@ -2,14 +2,20 @@
 # compartilhadas entre serviços - ver
 # docs-warehouse/architecture/2026-09-03-secrets-and-envs-design.md
 
-# Credenciais do próprio infra-platform (não de nenhum serviço de app) -
-# hash do admin do ArgoCD, token da Cloudflare, e-mail ACME. Único valor que
-# ainda precisa ser manual/local é a Machine Identity que autentica aqui
-# (infisical_client_id/secret em variables.tf) - o resto vem todo daqui.
-data "infisical_secrets" "infra_platform" {
+# Credenciais do próprio infra-platform (não de nenhum serviço de app).
+# Único valor que ainda precisa ser manual/local é a Machine Identity que
+# autentica aqui (infisical_client_id/secret em variables.tf) - o resto
+# vem todo do Infisical.
+data "infisical_secrets" "cloudflare" {
   env_slug     = "prod"
   workspace_id = var.infisical_project_id
-  folder_path  = "/infra-platform"
+  folder_path  = "/cloudflare"
+}
+
+data "infisical_secrets" "terraform" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/terraform"
 }
 
 data "infisical_secrets" "database" {
