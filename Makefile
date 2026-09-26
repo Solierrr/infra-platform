@@ -34,6 +34,7 @@ plan: ## Show the proposed infrastructure changes
 
 apply: ## Apply reviewed infrastructure changes
 	powershell -NoProfile -ExecutionPolicy Bypass -Command ". ./scripts/ensure-secrets.ps1; terraform apply"
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-gitops.ps1
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active true
 
 destroy: ## Destroy all infrastructure
