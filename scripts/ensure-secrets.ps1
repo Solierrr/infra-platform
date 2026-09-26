@@ -3,6 +3,9 @@
   Garante que scripts/secrets.local.ps1 existe e carrega ele na sessão atual.
   Se o arquivo ainda não existir, pede o Client ID/Secret da Machine Identity
   gke-sync do Infisical via terminal e cria o arquivo antes de carregar.
+  Também detecta o IP público atual da máquina e define
+  TF_VAR_authorized_ip_cidr com ele, já que o control plane do GKE só aceita
+  conexões do IP autorizado no momento do apply (muda a cada rede/máquina).
 
 .EXAMPLE
   . ./scripts/ensure-secrets.ps1
@@ -35,3 +38,11 @@ if (-not (Test-Path $secretsPath)) {
 }
 
 . $secretsPath
+
+try {
+    $publicIp = (Invoke-RestMethod -Uri "https://api.ipify.org" -TimeoutSec 5).Trim()
+    $env:TF_VAR_authorized_ip_cidr = "$publicIp/32"
+    Write-Host "IP publico detectado: $publicIp/32 (autorizado no control plane do GKE)." -ForegroundColor Cyan
+} catch {
+    Write-Host "Nao foi possivel detectar o IP publico automaticamente - usando o default de variables.tf, que pode estar desatualizado." -ForegroundColor Yellow
+}
