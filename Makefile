@@ -34,11 +34,11 @@ plan: ## Show the proposed infrastructure changes
 
 apply: ## Apply reviewed infrastructure changes
 	powershell -NoProfile -ExecutionPolicy Bypass -Command ". ./scripts/ensure-secrets.ps1; terraform apply"
-	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active $$true
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active true
 
 destroy: ## Destroy all infrastructure
 	powershell -NoProfile -ExecutionPolicy Bypass -Command ". ./scripts/ensure-secrets.ps1; terraform destroy"
-	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active $$false
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active false
 
 extract-env: tools-check ## Generate an environment file (ENV=local SERVICE=api-core OUT=.env)
 	$(ORG_SCRIPTS_POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File "$(EXTRACT_ENV)" -Environment "$(ENV)" $(if $(SERVICE),-Service "$(SERVICE)") -OutputPath "$(OUT)"

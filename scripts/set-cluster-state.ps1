@@ -7,14 +7,15 @@
   de propósito.
 
 .EXAMPLE
-  ./scripts/set-cluster-state.ps1 -Active $true
+  ./scripts/set-cluster-state.ps1 -Active true
 
 .EXAMPLE
-  ./scripts/set-cluster-state.ps1 -Active $false
+  ./scripts/set-cluster-state.ps1 -Active false
 #>
 param(
     [Parameter(Mandatory = $true)]
-    [bool]$Active
+    [ValidateSet("true", "false")]
+    [string]$Active
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,7 +28,7 @@ if (git status --porcelain) {
 git checkout main
 git pull origin main
 
-$stateValue = if ($Active) { "true" } else { "false" }
+$stateValue = $Active
 $currentContent = Get-Content ephemerality.json -Raw
 
 if ($currentContent -match '"active"\s*:\s*(true|false)' -and $matches[1] -eq $stateValue) {
@@ -47,7 +48,7 @@ if ($currentContent -match '"active"\s*:\s*(true|false)' -and $matches[1] -eq $s
     $body = @"
 ## Objetivo
 
-Refletir em ephemerality.json que o cluster solaria-gke está $(if ($Active) { "ativo" } else { "inativo" }) agora, pro check de Production dos repos de aplicação parar de reportar falha quando o cluster está desligado de propósito.
+Refletir em ephemerality.json que o cluster solaria-gke está $(if ($Active -eq 'true') { "ativo" } else { "inativo" }) agora, pro check de Production dos repos de aplicação parar de reportar falha quando o cluster está desligado de propósito.
 
 ## Alterações
 
