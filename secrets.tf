@@ -2,6 +2,16 @@
 # compartilhadas entre serviços - ver
 # docs-warehouse/architecture/2026-09-03-secrets-and-envs-design.md
 
+# Credenciais do próprio infra-platform (não de nenhum serviço de app) -
+# hash do admin do ArgoCD, token da Cloudflare, e-mail ACME. Único valor que
+# ainda precisa ser manual/local é a Machine Identity que autentica aqui
+# (infisical_client_id/secret em variables.tf) - o resto vem todo daqui.
+data "infisical_secrets" "infra_platform" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/infra-platform"
+}
+
 data "infisical_secrets" "database" {
   env_slug     = "prod"
   workspace_id = var.infisical_project_id

@@ -80,11 +80,11 @@ resource "helm_release" "argocd" {
     },
     {
       name  = "server.ingress.hostname"
-      value = "argocd.${google_compute_address.kong_ip.address}.sslip.io"
+      value = "argocd.${var.domain}"
     },
     {
       name  = "configs.secret.argocdServerAdminPassword"
-      value = var.argocd_admin_password_hash
+      value = data.infisical_secrets.infra_platform.secrets["ARGOCD_ADMIN_PASSWORD_HASH"].value
     },
     {
       name  = "configs.secret.argocdServerAdminPasswordMtime"
@@ -98,6 +98,26 @@ resource "helm_release" "argocd" {
 resource "google_compute_address" "kong_ip" {
   name   = "solaria-kong-ip"
   region = var.gcp_region
+}
+
+# Zona já existente na Cloudflare (domínio comprado direto lá, DNS já
+# delegado) - só lida, nunca criada aqui.
+data "cloudflare_zone" "primary" {
+  filter = {
+    name = var.domain
+  }
+}
+
+# Wildcard apontando pro IP atual do Kong - cobre qualquer subdomínio
+# (web, argocd, api-auth, etc.) com um único registro, e se atualiza
+# sozinho a cada apply quando o cluster (e o IP) é recriado.
+resource "cloudflare_dns_record" "wildcard" {
+  zone_id = data.cloudflare_zone.primary.zone_id
+  name    = "*.${var.domain}"
+  type    = "A"
+  content = google_compute_address.kong_ip.address
+  ttl     = 300
+  proxied = false
 }
 
 data "http" "kong_values_base" {
@@ -164,7 +184,7 @@ resource "kubernetes_secret" "cloudflare_api_token" {
   }
 
   data = {
-    api-token = var.cloudflare_api_token
+    api-token = data.infisical_secrets.infra_platform.secrets["CLOUDFLARE_API_TOKEN"].value
   }
 
   type = "Opaque"
@@ -181,7 +201,7 @@ resource "kubectl_manifest" "letsencrypt_prod_issuer" {
     spec:
       acme:
         server: https://acme-v02.api.letsencrypt.org/directory
-        email: ${var.acme_email}
+        email: ${data.infisical_secrets.infra_platform.secrets["ACME_EMAIL"].value}
         privateKeySecretRef:
           name: letsencrypt-prod-account-key
         solvers:
@@ -204,7 +224,7 @@ resource "kubectl_manifest" "letsencrypt_http01_issuer" {
     spec:
       acme:
         server: https://acme-v02.api.letsencrypt.org/directory
-        email: ${var.acme_email}
+        email: ${data.infisical_secrets.infra_platform.secrets["ACME_EMAIL"].value}
         privateKeySecretRef:
           name: letsencrypt-prod-http01-account-key
         solvers:
