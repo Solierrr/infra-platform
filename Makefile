@@ -8,7 +8,7 @@ OUT ?= .env
 
 .DEFAULT_GOAL := help
 
-.PHONY: help tools-check install login init plan apply extract-env toggle-nodes
+.PHONY: help tools-check install login init plan apply destroy extract-env toggle-nodes
 
 help: ## Show the available commands
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\\n\\n"} /^[a-zA-Z_-]+:.*## / {printf "  %-16s %s\\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -34,6 +34,11 @@ plan: ## Show the proposed infrastructure changes
 
 apply: ## Apply reviewed infrastructure changes
 	terraform apply
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active $$true
+
+destroy: ## Destroy all infrastructure
+	terraform destroy
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active $$false
 
 extract-env: tools-check ## Generate an environment file (ENV=local SERVICE=api-core OUT=.env)
 	$(ORG_SCRIPTS_POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File "$(EXTRACT_ENV)" -Environment "$(ENV)" $(if $(SERVICE),-Service "$(SERVICE)") -OutputPath "$(OUT)"
