@@ -13,7 +13,7 @@ Este repositório é Terraform (IaC). Não há "servidor de desenvolvimento" —
 - **Terraform CLI instalado**, na versão travada em `.terraform.lock.hcl` (`>= 1.16.0`) — versões diferentes podem gerar diffs de provider inesperados.
 - **Acesso ao Google Cloud (`gcloud auth application-default login`)**, o provider Google do Terraform usa Application Default Credentials — sem isso, `terraform plan` falha na autenticação.
 - **Permissão de owner/editor no projeto GCP (`solaria-authenticator`)**, criar/alterar recursos de cluster (GKE, VPC, IAM) exige permissões elevadas, normalmente restritas a poucas pessoas na organização.
-- **Credencial do Infisical carregada na sessão antes do `plan`/`apply`**, além do GCP, o Terraform depende de `TF_VAR_infisical_client_id`/`TF_VAR_infisical_client_secret` — sem elas, o `plan` falha pedindo os valores interativamente. O resto já vem direto do Infisical: hash do admin do ArgoCD e e-mail do ACME (pasta `/terraform`), token da Cloudflare (pasta `/cloudflare`) — nenhum precisa de variável local.
+- **`scripts/secrets.local.ps1` preenchido**, além do GCP, o Terraform depende de `TF_VAR_infisical_client_id`/`TF_VAR_infisical_client_secret` — sem eles, o `plan` falha pedindo os valores interativamente (ou o `make plan`/`make apply`/`make destroy` falha na hora de carregar o arquivo). O resto já vem direto do Infisical: hash do admin do ArgoCD e e-mail do ACME (pasta `/terraform`), token da Cloudflare (pasta `/cloudflare`) — nenhum precisa de variável local.
 - **`gh` (GitHub CLI) autenticado**, necessário apenas para quem for usar `scripts/toggle-nodes.ps1`, já que o script abre e faz merge de Pull Requests automaticamente.
 - **`terraform apply` é uma ação real e cobrada**, ao contrário de rodar uma aplicação localmente, aplicar este Terraform sobe recursos de verdade no Google Cloud (cluster GKE, nodes, IP público) — nunca rode `apply` sem antes revisar o `plan` com atenção.
 
@@ -69,9 +69,11 @@ code . -r
   </a>
 </p>
 
-Copie `scripts/secrets.template.ps1` para `scripts/secrets.local.ps1` (já está no `.gitignore`) e preencha o client ID/secret da Machine Identity `gke-sync` do Infisical — é a única credencial que precisa ficar local, o resto o Terraform já lê direto do Infisical. Depois, a partir da raiz do repositório, carregue a variável na sessão atual do PowerShell antes de rodar qualquer comando do Terraform:
+Copie `scripts/secrets.template.ps1` para `scripts/secrets.local.ps1` (já está no `.gitignore`) e preencha o client ID/secret da Machine Identity `gke-sync` do Infisical — é a única credencial que precisa ficar local, o resto o Terraform já lê direto do Infisical.
 
-```Comando para carregar os segredos na sessão
+`make plan`, `make apply` e `make destroy` já carregam `scripts/secrets.local.ps1` sozinhos antes de rodar o Terraform. Só é preciso carregar a variável manualmente na sessão do PowerShell se for rodar `terraform plan`/`apply`/`destroy` direto, sem passar pelo Makefile:
+
+```Comando para carregar os segredos na sessão manualmente
 . .\scripts\secrets.local.ps1
 ```
 

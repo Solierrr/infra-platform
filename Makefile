@@ -30,14 +30,14 @@ init: ## Initialize Terraform providers and backend
 	terraform init
 
 plan: ## Show the proposed infrastructure changes
-	terraform plan
+	powershell -NoProfile -ExecutionPolicy Bypass -Command "\$$ErrorActionPreference = 'Stop'; . ./scripts/secrets.local.ps1; terraform plan"
 
 apply: ## Apply reviewed infrastructure changes
-	terraform apply
+	powershell -NoProfile -ExecutionPolicy Bypass -Command "\$$ErrorActionPreference = 'Stop'; . ./scripts/secrets.local.ps1; terraform apply"
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active $$true
 
 destroy: ## Destroy all infrastructure
-	terraform destroy
+	powershell -NoProfile -ExecutionPolicy Bypass -Command "\$$ErrorActionPreference = 'Stop'; . ./scripts/secrets.local.ps1; terraform destroy"
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active $$false
 
 extract-env: tools-check ## Generate an environment file (ENV=local SERVICE=api-core OUT=.env)
