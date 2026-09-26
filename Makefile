@@ -8,7 +8,7 @@ OUT ?= .env
 
 .DEFAULT_GOAL := help
 
-.PHONY: help tools-check install login init plan apply destroy extract-env toggle-nodes
+.PHONY: help tools-check install login init plan apply destroy extract-env toggle-nodes check-environments
 
 help: ## Show the available commands
 	@awk 'BEGIN {FS = ":.*## "; printf "Usage: make <target>\\n\\n"} /^[a-zA-Z_-]+:.*## / {printf "  %-16s %s\\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -45,3 +45,6 @@ extract-env: tools-check ## Generate an environment file (ENV=local SERVICE=api-
 
 toggle-nodes: ## Set node-pool capacity (NODES=0, optionally APPLY=1)
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/toggle-nodes.ps1 -NodeCount $(NODES) $(if $(APPLY),-Apply)
+
+check-environments: ## Re-trigger the environment status workflow on all app repos, without changing ephemerality.json
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/trigger-environment-checks.ps1
