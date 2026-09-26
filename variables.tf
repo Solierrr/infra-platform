@@ -22,21 +22,10 @@ variable "authorized_ip_cidr" {
   default     = "189.57.250.90/32"
 }
 
-variable "argocd_admin_password_hash" {
+variable "domain" {
   type        = string
-  description = "Hash bcrypt da senha fixa do admin do ArgoCD (gere localmente com bcrypt, nunca a senha em texto puro)"
-  sensitive   = true
-}
-
-variable "cloudflare_api_token" {
-  type        = string
-  description = "Token da API do Cloudflare (permissão Zone:DNS:Edit na zona solaria.com) usado pelo cert-manager no desafio DNS-01"
-  sensitive   = true
-}
-
-variable "acme_email" {
-  type        = string
-  description = "E-mail usado para registrar a conta ACME no Let's Encrypt (avisos de expiração de certificado)"
+  description = "Domínio raiz na Cloudflare (zona DNS) usado pelo Ingress público e pelo desafio DNS-01"
+  default     = "solarianetwork.site"
 }
 
 variable "infisical_client_id" {

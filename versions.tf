@@ -26,6 +26,10 @@ terraform {
       source  = "Infisical/infisical"
       version = "~> 0.15"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
+    }
   }
 }
 
@@ -67,4 +71,8 @@ provider "infisical" {
       client_secret = var.infisical_client_secret
     }
   }
+}
+
+provider "cloudflare" {
+  api_token = data.infisical_secrets.infra_platform.secrets["CLOUDFLARE_API_TOKEN"].value
 }

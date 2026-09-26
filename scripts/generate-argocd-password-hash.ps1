@@ -1,8 +1,9 @@
 <#
 .SYNOPSIS
-  Gera o hash bcrypt de uma senha pro var.argocd_admin_password_hash do
-  Terraform (usado como senha fixa do admin do ArgoCD). Nunca cole a senha
-  em texto puro no Terraform - só o hash gerado aqui.
+  Gera o hash bcrypt de uma senha pra chave ARGOCD_ADMIN_PASSWORD_HASH na
+  pasta /infra-platform do Infisical (usado como senha fixa do admin do
+  ArgoCD). Nunca salve a senha em texto puro em lugar nenhum - só o hash
+  gerado aqui.
 
 .EXAMPLE
   ./scripts/generate-argocd-password-hash.ps1 -Password "minha-senha-aqui"
@@ -32,5 +33,5 @@ if (-not $hash) {
     exit 1
 }
 
-Write-Host "Hash bcrypt (cole em var.argocd_admin_password_hash):" -ForegroundColor Cyan
+Write-Host "Hash bcrypt (salve em ARGOCD_ADMIN_PASSWORD_HASH na pasta /infra-platform do Infisical):" -ForegroundColor Cyan
 Write-Output $hash
