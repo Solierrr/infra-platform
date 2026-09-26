@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
   Gera o hash bcrypt de uma senha pra chave ARGOCD_ADMIN_PASSWORD_HASH na
-  pasta /infra-platform do Infisical (usado como senha fixa do admin do
+  pasta /terraform do Infisical (usado como senha fixa do admin do
   ArgoCD). Nunca salve a senha em texto puro em lugar nenhum - só o hash
   gerado aqui.
 
@@ -33,5 +33,5 @@ if (-not $hash) {
     exit 1
 }
 
-Write-Host "Hash bcrypt (salve em ARGOCD_ADMIN_PASSWORD_HASH na pasta /infra-platform do Infisical):" -ForegroundColor Cyan
+Write-Host "Hash bcrypt (salve em ARGOCD_ADMIN_PASSWORD_HASH na pasta /terraform do Infisical):" -ForegroundColor Cyan
 Write-Output $hash

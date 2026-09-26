@@ -74,5 +74,5 @@ provider "infisical" {
 }
 
 provider "cloudflare" {
-  api_token = data.infisical_secrets.infra_platform.secrets["CLOUDFLARE_API_TOKEN"].value
+  api_token = data.infisical_secrets.cloudflare.secrets["CLOUDFLARE_API_TOKEN"].value
 }

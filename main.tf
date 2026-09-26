@@ -84,7 +84,7 @@ resource "helm_release" "argocd" {
     },
     {
       name  = "configs.secret.argocdServerAdminPassword"
-      value = data.infisical_secrets.infra_platform.secrets["ARGOCD_ADMIN_PASSWORD_HASH"].value
+      value = data.infisical_secrets.terraform.secrets["ARGOCD_ADMIN_PASSWORD_HASH"].value
     },
     {
       name  = "configs.secret.argocdServerAdminPasswordMtime"
@@ -184,7 +184,7 @@ resource "kubernetes_secret" "cloudflare_api_token" {
   }
 
   data = {
-    api-token = data.infisical_secrets.infra_platform.secrets["CLOUDFLARE_API_TOKEN"].value
+    api-token = data.infisical_secrets.cloudflare.secrets["CLOUDFLARE_API_TOKEN"].value
   }
 
   type = "Opaque"
@@ -201,7 +201,7 @@ resource "kubectl_manifest" "letsencrypt_prod_issuer" {
     spec:
       acme:
         server: https://acme-v02.api.letsencrypt.org/directory
-        email: ${data.infisical_secrets.infra_platform.secrets["ACME_EMAIL"].value}
+        email: ${data.infisical_secrets.terraform.secrets["ACME_EMAIL"].value}
         privateKeySecretRef:
           name: letsencrypt-prod-account-key
         solvers:
@@ -224,7 +224,7 @@ resource "kubectl_manifest" "letsencrypt_http01_issuer" {
     spec:
       acme:
         server: https://acme-v02.api.letsencrypt.org/directory
-        email: ${data.infisical_secrets.infra_platform.secrets["ACME_EMAIL"].value}
+        email: ${data.infisical_secrets.terraform.secrets["ACME_EMAIL"].value}
         privateKeySecretRef:
           name: letsencrypt-prod-http01-account-key
         solvers:
