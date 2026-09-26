@@ -8,6 +8,14 @@ data "infisical_secrets" "database" {
   folder_path  = "/database"
 }
 
+# URLs internas de serviço, consumidas por quem chama outro serviço da
+# organização (JWKS, base URLs de auth/persistence/messenger/mcp).
+data "infisical_secrets" "service_urls" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/service-urls"
+}
+
 # --- api-messenger --------------------------------------------------------
 
 resource "kubernetes_secret" "api_messenger" {
@@ -26,6 +34,11 @@ resource "kubernetes_secret" "api_messenger" {
       for name, secret in data.infisical_secrets.auth.secrets :
       name => secret.value
       if contains(["SERVICE_JWT_SECRET", "SERVICE_CLIENT_SECRET"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.service_urls.secrets :
+      name => secret.value
+      if contains(["JWT_JWK_SET_URI", "AUTH_SERVICE_URL", "PERSISTENCE_BASE_URL"], name)
     },
   )
 
@@ -74,6 +87,11 @@ resource "kubernetes_secret" "api_core" {
     { for name, secret in data.infisical_secrets.redis.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.cloudinary.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.google.secrets : name => secret.value },
+    {
+      for name, secret in data.infisical_secrets.service_urls.secrets :
+      name => secret.value
+      if contains(["JWT_JWK_SET_URI"], name)
+    },
   )
 
   type = "Opaque"
@@ -99,6 +117,11 @@ resource "kubernetes_secret" "api_auth" {
     { for name, secret in data.infisical_secrets.database.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.redis.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.auth.secrets : name => secret.value },
+    {
+      for name, secret in data.infisical_secrets.service_urls.secrets :
+      name => secret.value
+      if contains(["PERSISTENCE_BASE_URL"], name)
+    },
   )
 
   type = "Opaque"
@@ -195,20 +218,38 @@ resource "kubernetes_secret" "ai_assistant" {
   }
 
   data = merge(
+    # MONGO_URI (não DB_MONGO_URI) - settings.py aceita MONGO_URI/MONGODB_URI
+    # via AliasChoices, nunca o prefixo DB_ usado na pasta compartilhada.
+    {
+      MONGO_URI = data.infisical_secrets.database.secrets["DB_MONGO_URI"].value
+    },
     {
       for name, secret in data.infisical_secrets.database.secrets :
       name => secret.value
-      if contains(["DB_MONGO_URI", "DB_MONGO_AGENTS"], name)
+      if contains(["QDRANT_URL", "QDRANT_API_KEY"], name)
     },
+    # UPSTASH_REDIS_* (não UPSTASH_AGENTS_*) - nome esperado por settings.py.
     {
-      for name, secret in data.infisical_secrets.redis.secrets :
-      name => secret.value
-      if contains(["UPSTASH_AGENTS_HOST", "UPSTASH_AGENTS_PORT", "UPSTASH_AGENTS_USERNAME", "UPSTASH_AGENTS_PASSWORD"], name)
+      UPSTASH_REDIS_HOST     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_HOST"].value
+      UPSTASH_REDIS_PORT     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PORT"].value
+      UPSTASH_REDIS_USERNAME = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_USERNAME"].value
+      UPSTASH_REDIS_PASSWORD = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PASSWORD"].value
     },
     {
       for name, secret in data.infisical_secrets.llm.secrets :
       name => secret.value
       if contains(["GOOGLE_API_KEY", "GROQ_API_KEY"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.mcp.secrets :
+      name => secret.value
+      if contains(["MCP_API_KEY"], name)
+    },
+    # JWT_JWKS_URL (não JWT_JWK_SET_URI) - nome esperado por settings.py.
+    {
+      API_MESSENGER_URL = data.infisical_secrets.service_urls.secrets["API_MESSENGER_URL"].value
+      JWT_JWKS_URL      = data.infisical_secrets.service_urls.secrets["JWT_JWK_SET_URI"].value
+      MCP_URL           = data.infisical_secrets.service_urls.secrets["MCP_URL"].value
     },
   )
 
