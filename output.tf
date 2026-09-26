@@ -2,6 +2,11 @@ output "vpc_id" {
   value = google_compute_network.vpc.id
 }
 
+output "kong_ip" {
+  description = "IP público do Kong - muda a cada recriação do cluster, usado pra atualizar os hosts sslip.io no infra-gitops"
+  value       = google_compute_address.kong_ip.address
+}
+
 output "gke_cluster_name" {
   value = google_container_cluster.primary.name
 }
