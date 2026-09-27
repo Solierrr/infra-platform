@@ -109,11 +109,22 @@ data "cloudflare_zone" "primary" {
 }
 
 # Wildcard apontando pro IP atual do Kong - cobre qualquer subdomínio
-# (web, argocd, api-auth, etc.) com um único registro, e se atualiza
-# sozinho a cada apply quando o cluster (e o IP) é recriado.
+# (argocd, api-auth, etc.) com um único registro, e se atualiza sozinho a
+# cada apply quando o cluster (e o IP) é recriado.
 resource "cloudflare_dns_record" "wildcard" {
   zone_id = data.cloudflare_zone.primary.zone_id
   name    = "*.${var.domain}"
+  type    = "A"
+  content = google_compute_address.kong_ip.address
+  ttl     = 300
+  proxied = false
+}
+
+# Domínio raiz (sem subdomínio) - o wildcard acima não cobre o apex, então
+# precisa de registro próprio. É onde o web-app fica exposto.
+resource "cloudflare_dns_record" "apex" {
+  zone_id = data.cloudflare_zone.primary.zone_id
+  name    = var.domain
   type    = "A"
   content = google_compute_address.kong_ip.address
   ttl     = 300
