@@ -127,8 +127,8 @@ resource "cloudflare_dns_record" "apex" {
   name    = var.domain
   type    = "A"
   content = google_compute_address.kong_ip.address
-  ttl     = 300
-  proxied = false
+  ttl     = 1
+  proxied = true
 }
 
 data "http" "kong_values_base" {
