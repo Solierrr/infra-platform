@@ -180,6 +180,11 @@ resource "kubernetes_secret" "api_recommendation" {
   data = merge(
     { for name, secret in data.infisical_secrets.database.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.recommendation.secrets : name => secret.value },
+    {
+      for name, secret in data.infisical_secrets.feeddb.secrets :
+      name => secret.value
+      if contains(["DB_NEO4J_URI", "DB_NEO4J_USER", "DB_NEO4J_PASSWORD", "DB_NEO4J_FEED"], name)
+    },
   )
 
   type = "Opaque"
