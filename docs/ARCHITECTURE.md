@@ -24,6 +24,7 @@ Este repositório segue a arquitetura padrão de um projeto Terraform da organiz
 - `helm_release.kong`, instalação do Kong como API Gateway/Ingress Controller, usando o IP reservado acima como `proxy.loadBalancerIP`.
 - `helm_release.cert_manager`, instalação do cert-manager, responsável por emitir e renovar certificados TLS no cluster.
 - `kubernetes_secret.cloudflare_api_token`, token da API do Cloudflare usado pelo cert-manager no desafio DNS-01.
+- `cloudflare_dns_record.api_recommendation` e `cloudflare_ruleset.api_recommendation_cache`, o registro com proxy da Cloudflare para `api-recommendation.<domínio>` (que sobrepõe o wildcard DNS-only) e a regra de cache que atende `/public/feeds/*` na borda respeitando o `Cache-Control` da origem. Exigem que o token da Cloudflare tenha permissão de editar regras de cache da zona.
 - `kubectl_manifest.letsencrypt_prod_issuer` e `kubectl_manifest.letsencrypt_http01_issuer`, os `ClusterIssuer` do Let's Encrypt (desafios DNS-01 via Cloudflare e HTTP-01 via Kong, respectivamente).
 
 ## Propósito de `secrets.tf`
