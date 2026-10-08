@@ -131,6 +131,41 @@ resource "cloudflare_dns_record" "apex" {
   proxied = true
 }
 
+# api-recommendation com proxy da Cloudflare - o registro próprio sobrepõe o
+# wildcard (que é DNS-only) só para este host, e o cache abaixo faz os feeds
+# públicos serem atendidos na borda sem chegar à origem.
+resource "cloudflare_dns_record" "api_recommendation" {
+  zone_id = data.cloudflare_zone.primary.zone_id
+  name    = "api-recommendation.${var.domain}"
+  type    = "A"
+  content = google_compute_address.kong_ip.address
+  ttl     = 1
+  proxied = true
+}
+
+# A Cloudflare não cacheia respostas JSON por padrão. Esta regra cacheia só
+# /public/feeds/* e deixa a origem mandar no TTL (Cache-Control do serviço).
+resource "cloudflare_ruleset" "api_recommendation_cache" {
+  zone_id     = data.cloudflare_zone.primary.zone_id
+  name        = "api-recommendation public feeds cache"
+  description = "Cache dos feeds públicos do api-recommendation, respeitando o Cache-Control da origem"
+  kind        = "zone"
+  phase       = "http_request_cache_settings"
+
+  rules = [{
+    action      = "set_cache_settings"
+    description = "Cacheia /public/feeds/* do api-recommendation"
+    enabled     = true
+    expression  = "(http.host eq \"api-recommendation.${var.domain}\" and starts_with(http.request.uri.path, \"/public/feeds/\"))"
+    action_parameters = {
+      cache       = true
+      edge_ttl    = { mode = "respect_origin" }
+      browser_ttl = { mode = "respect_origin" }
+      serve_stale = { disable_stale_while_updating = false }
+    }
+  }]
+}
+
 data "http" "kong_values_base" {
   url = "https://raw.githubusercontent.com/Solierrr/infra-gateway/main/helm/values-base.yaml"
 }
