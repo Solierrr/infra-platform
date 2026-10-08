@@ -290,6 +290,56 @@ resource "kubernetes_secret" "ai_validation" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
+# --- feeddb e database-bootstrap ---------------------------------------------
+# Neo4j self-hosted (grafo descartável) e o job que o reconstrói a partir do
+# Postgres. /feeddb guarda só as credenciais do Neo4j; o Postgres vem de
+# /database, restrito às chaves que o job lê.
+
+data "infisical_secrets" "feeddb" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/feeddb"
+}
+
+resource "kubernetes_secret" "feeddb" {
+  metadata {
+    name      = "feeddb-secrets"
+    namespace = "default"
+  }
+
+  data = {
+    NEO4J_AUTH = "neo4j/${data.infisical_secrets.feeddb.secrets["DB_NEO4J_PASSWORD"].value}"
+  }
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+resource "kubernetes_secret" "database_bootstrap" {
+  metadata {
+    name      = "database-bootstrap-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      for name, secret in data.infisical_secrets.database.secrets :
+      name => secret.value
+      if contains(["DB_POSTGRES_HOST", "DB_POSTGRES_PORT", "DB_POSTGRES_CORE", "DB_POSTGRES_USER", "DB_POSTGRES_PASSWORD", "DB_POSTGRES_SSLMODE"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.feeddb.secrets :
+      name => secret.value
+      if contains(["DB_NEO4J_URI", "DB_NEO4J_USER", "DB_NEO4J_PASSWORD", "DB_NEO4J_FEED"], name)
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
 # --- web-app ------------------------------------------------------------
 # Propositalmente sem kubernetes_secret: web-app é uma SPA estática (Vite +
 # nginx) - as VITE_* são embutidas no bundle em build time (npm run build),
