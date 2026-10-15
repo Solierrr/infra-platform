@@ -296,8 +296,11 @@ resource "kubernetes_secret" "ai_validation" {
 }
 
 # --- google-registry --------------------------------------------------------
-# Chaves do Google e de LLM entregues pelo serviço, e as URLs de auth para
-# validar o JWT. Serviço interno (ClusterIP, sem Ingress), como o mcp-database.
+# Chaves do Google (inclusive o OAuth do Calendar) e de LLM entregues pelo
+# serviço, e as URLs de auth para validar o JWT. Serviço interno (ClusterIP,
+# sem Ingress), como o mcp-database. O serviço lê nomes próprios
+# (GOOGLE_KEY_MAPS, GOOGLE_KEY_TRANSLATION, JWT_JWKS_URL, AUTH_BASE_URL), então
+# o secret renomeia as chaves do Infisical em vez de duplicá-las.
 
 resource "kubernetes_secret" "google_registry" {
   metadata {
@@ -309,9 +312,10 @@ resource "kubernetes_secret" "google_registry" {
     { for name, secret in data.infisical_secrets.google.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.llm.secrets : name => secret.value },
     {
-      for name, secret in data.infisical_secrets.service_urls.secrets :
-      name => secret.value
-      if contains(["AUTH_SERVICE_URL", "JWT_JWK_SET_URI"], name)
+      GOOGLE_KEY_MAPS        = data.infisical_secrets.google.secrets["GOOGLE_MAPS_API_KEY"].value
+      GOOGLE_KEY_TRANSLATION = data.infisical_secrets.google.secrets["GOOGLE_TRANSLATE_API_KEY"].value
+      JWT_JWKS_URL           = data.infisical_secrets.service_urls.secrets["JWT_JWK_SET_URI"].value
+      AUTH_BASE_URL          = data.infisical_secrets.service_urls.secrets["AUTH_SERVICE_URL"].value
     },
   )
 
