@@ -295,6 +295,31 @@ resource "kubernetes_secret" "ai_validation" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
+# --- google-registry --------------------------------------------------------
+# Chaves do Google e de LLM entregues pelo serviço, e as URLs de auth para
+# validar o JWT. Serviço interno (ClusterIP, sem Ingress), como o mcp-database.
+
+resource "kubernetes_secret" "google_registry" {
+  metadata {
+    name      = "google-registry-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    { for name, secret in data.infisical_secrets.google.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.llm.secrets : name => secret.value },
+    {
+      for name, secret in data.infisical_secrets.service_urls.secrets :
+      name => secret.value
+      if contains(["AUTH_SERVICE_URL", "JWT_JWK_SET_URI"], name)
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
 # --- feeddb e database-bootstrap ---------------------------------------------
 # Neo4j self-hosted (grafo descartável) e o job que o reconstrói a partir do
 # Postgres. /feeddb guarda só as credenciais do Neo4j; o Postgres vem de
