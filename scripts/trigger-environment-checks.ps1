@@ -12,7 +12,8 @@ $ErrorActionPreference = "Stop"
 
 $repos = @(
     "api-auth", "api-core", "api-messenger", "api-recommendation",
-    "mcp-database", "ai-assistant", "ai-validation", "ai-accessibility", "web-app"
+    "mcp-database", "ai-assistant", "ai-validation", "ai-accessibility", "web-app",
+    "google-registry", "ai-geographic", "ai-operational", "api-email"
 )
 
 foreach ($repo in $repos) {
