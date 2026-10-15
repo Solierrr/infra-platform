@@ -28,20 +28,19 @@ Este repositório é Terraform (IaC). Não há "servidor de desenvolvimento" —
 O `Makefile` na raiz embrulha os comandos mais usados deste repositório - nenhum deles substitui os passos abaixo, é só conveniência.
 
 ```Comandos do Makefile
-make install                             # instala terraform, gcloud sdk, gh, infisical e kubectl via winget
+make install-tools                        # instala terraform, gcloud sdk, gh, infisical e kubectl via winget
 make login                                # infisical login
 make init                                 # terraform init
 make plan                                 # terraform plan
 make apply                                # terraform apply
-make tools-check                          # confirma a instalação de infra-scripts
-make extract-env ENV=local                # extrai TODAS as pastas mapeadas pra .env
-make extract-env ENV=qa SERVICE=api-core  # extrai só as pastas do serviço informado
-make extract-env ENV=local OUT=.env.local # com caminho de saída customizado
+make doctor                               # confirma as ferramentas necessárias (git e terraform) e a sessão do Infisical
+make install                              # terraform init -backend=false (só providers, para validar)
+make ci                                   # terraform fmt -check e terraform validate (rode make install antes)
 make toggle-nodes NODES=0                 # zera o node pool (pausa o cluster), abre e mergeia a PR
 make toggle-nodes NODES=2 APPLY=1         # restaura o node pool e já aplica
 ```
 
-`make extract-env` chama `extract-env.ps1` do repositório compartilhado `Solierrr/infra-scripts`. Instale-o uma vez por máquina em `$HOME/.local/share/solierrr-infra-scripts` e mantenha a atualização explícita com `git -C "$HOME/.local/share/solierrr-infra-scripts" pull --ff-only`. O script checa se o Infisical CLI está instalado e se há sessão ativa (`infisical login`) antes de extrair qualquer valor.
+`make install`, `make lint`, `make build` e `make ci` seguem o Makefile padrão da organização (`docs-warehouse/templates/make/`) e não precisam de credenciais do GCP. `plan`, `apply`, `destroy`, `toggle-nodes` e `check-environments` são alvos próprios que chamam os scripts PowerShell de `scripts/`.
 
 ## Instalação do Projeto
 
