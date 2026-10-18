@@ -259,7 +259,7 @@ resource "kubernetes_secret" "ai_assistant" {
     {
       for name, secret in data.infisical_secrets.llm.secrets :
       name => secret.value
-      if contains(["GOOGLE_API_KEY", "GROQ_API_KEY"], name)
+      if contains(["GEMINI_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "LLM_MODEL_OPENAI", "LLM_PROVIDER_ORDER"], name)
     },
     {
       for name, secret in data.infisical_secrets.mcp.secrets :
@@ -296,8 +296,8 @@ resource "kubernetes_secret" "ai_validation" {
 }
 
 # --- google-registry --------------------------------------------------------
-# Chaves do Google (inclusive o OAuth do Calendar) e de LLM entregues pelo
-# serviço, e as URLs de auth para validar o JWT. Serviço interno (ClusterIP,
+# Chaves do Google (inclusive o OAuth do Calendar) e as URLs de auth para
+# validar o JWT. Serviço interno (ClusterIP,
 # sem Ingress), como o mcp-database. O serviço lê nomes próprios
 # (GOOGLE_KEY_MAPS, GOOGLE_KEY_TRANSLATION, JWT_JWKS_URL, AUTH_BASE_URL), então
 # o secret renomeia as chaves do Infisical em vez de duplicá-las.
@@ -310,7 +310,6 @@ resource "kubernetes_secret" "google_registry" {
 
   data = merge(
     { for name, secret in data.infisical_secrets.google.secrets : name => secret.value },
-    { for name, secret in data.infisical_secrets.llm.secrets : name => secret.value },
     {
       GOOGLE_KEY_MAPS        = data.infisical_secrets.google.secrets["GOOGLE_MAPS_API_KEY"].value
       GOOGLE_KEY_TRANSLATION = data.infisical_secrets.google.secrets["GOOGLE_TRANSLATE_API_KEY"].value
