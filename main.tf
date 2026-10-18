@@ -120,16 +120,10 @@ resource "cloudflare_dns_record" "wildcard" {
   proxied = false
 }
 
-# Domínio raiz (sem subdomínio) - o wildcard acima não cobre o apex, então
-# precisa de registro próprio. É onde o web-app fica exposto.
-resource "cloudflare_dns_record" "apex" {
-  zone_id = data.cloudflare_zone.primary.zone_id
-  name    = var.domain
-  type    = "A"
-  content = google_compute_address.kong_ip.address
-  ttl     = 1
-  proxied = true
-}
+# O domínio raiz (apex) não é gerenciado aqui: ele é servido por um Worker do
+# Cloudflare (custom domain), e o Cloudflare recusa criar um registro DNS sobre
+# um host que já pertence a um Worker (erro 81062). Os subdomínios (argocd,
+# api-auth etc.) são cobertos pelo wildcard acima.
 
 # api-recommendation com proxy da Cloudflare - o registro próprio sobrepõe o
 # wildcard (que é DNS-only) só para este host, e o cache abaixo faz os feeds
