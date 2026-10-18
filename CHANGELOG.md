@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/Solierrr/infra-platform/compare/v1.0.0...v1.1.0) (2026-10-18)
+
+
+### Features
+
+* pass one llm key per provider to the ai services and drop the registry llm keys ([#68](https://github.com/Solierrr/infra-platform/issues/68)) ([0c3f194](https://github.com/Solierrr/infra-platform/commit/0c3f1943898df325457a78f2c95cedda16d17993))
+
+
+### Bug Fixes
+
+* stop managing the apex dns record that a worker owns ([#71](https://github.com/Solierrr/infra-platform/issues/71)) ([95127b1](https://github.com/Solierrr/infra-platform/commit/95127b1b3710c4b7c177b6af4682ae8c96c24881))
+
 ## 1.0.0 (2026-10-15)
 
 
