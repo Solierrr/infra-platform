@@ -10,6 +10,7 @@ Este repositório é Terraform (IaC). Não há "servidor de desenvolvimento" —
 
 ## Possíveis Impedimentos
 
+- **Git for Windows instalado**, para fornecer o shell e as ferramentas Unix usadas pelo Makefile. No Windows, o Makefile localiza o shell pela instalação do Git e permite executar `make` diretamente no PowerShell.
 - **Terraform CLI instalado**, na versão travada em `.terraform.lock.hcl` (`>= 1.16.0`) — versões diferentes podem gerar diffs de provider inesperados.
 - **Acesso ao Google Cloud (`gcloud auth application-default login`)**, o provider Google do Terraform usa Application Default Credentials — sem isso, `terraform plan` falha na autenticação.
 - **Permissão de owner/editor no projeto GCP (`solaria-authenticator`)**, criar/alterar recursos de cluster (GKE, VPC, IAM) exige permissões elevadas, normalmente restritas a poucas pessoas na organização.

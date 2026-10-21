@@ -22,6 +22,10 @@ OUT ?= .env
 # Git Bash converteria '/vite' em 'C:/Program Files/Git/vite' ao chamar o CLI. A variavel vale so para o
 # CLI: exporta-la para o make quebraria o mvnw, o gradlew e outras ferramentas que precisam da conversao.
 ifeq ($(OS),Windows_NT)
+# Native Windows Make defaults to cmd.exe, but the recipes below require sh.
+GIT_SHELL_ROOT := $(subst \,/,$(shell git --exec-path))/../../..
+SHELL := $(GIT_SHELL_ROOT)/bin/sh.exe
+export PATH := $(GIT_SHELL_ROOT)/usr/bin;$(PATH)
 INFISICAL ?= MSYS_NO_PATHCONV=1 infisical.exe
 else
 INFISICAL ?= infisical
