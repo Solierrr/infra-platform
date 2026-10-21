@@ -1,6 +1,6 @@
 # Makefile padrao dos repositorios Solierrr.
 # Igual em todos os repos: so o bloco "especifico deste repositorio" muda.
-# Requer: make e sh (Git Bash no Windows). Para `make vault`: Infisical CLI e `infisical login`.
+# Requer: make, sh (Git Bash no Windows) e Infisical CLI autenticado para acessar o vault.
 
 # ---- especifico deste repositorio ----
 VAULT_FOLDERS ?=
@@ -15,12 +15,18 @@ DOCTOR_TOOLS  ?= git terraform
 
 # ---- padrao (nao editar por repositorio) ----
 INFISICAL_PROJECT_ID ?= 2296d19c-5f3b-41e1-afa3-fcde39966a71
+INFISICAL_BOOTSTRAP_ENV ?= prod
+INFISICAL_BOOTSTRAP_PATH ?= /infisical
 ENV ?= local
 OUT ?= .env
 # Git Bash converteria '/vite' em 'C:/Program Files/Git/vite' ao chamar o CLI. A variavel vale so para o
 # CLI: exporta-la para o make quebraria o mvnw, o gradlew e outras ferramentas que precisam da conversao.
 ifeq ($(OS),Windows_NT)
-INFISICAL ?= MSYS_NO_PATHCONV=1 infisical.cmd
+# Native Windows Make defaults to cmd.exe, but the recipes below require sh.
+GIT_SHELL_ROOT := $(subst \,/,$(shell git --exec-path))/../../..
+SHELL := $(GIT_SHELL_ROOT)/bin/sh.exe
+export PATH := $(GIT_SHELL_ROOT)/usr/bin;$(PATH)
+INFISICAL ?= MSYS_NO_PATHCONV=1 infisical.exe
 else
 INFISICAL ?= infisical
 endif
@@ -84,7 +90,7 @@ doctor: ## Check that the tools this repository needs are available
 	done; \
 	if $(INFISICAL) --version >/dev/null 2>&1; then \
 		if $(INFISICAL) user get token --silent >/dev/null 2>&1; then echo "ok       infisical (logged in)"; else echo "WARN     infisical installed but not logged in (run 'infisical login')"; fi; \
-	else echo "WARN     infisical not installed (only needed for 'make vault')"; fi; \
+	else echo "WARN     infisical not installed (required for 'make plan', 'make apply', 'make destroy', 'make toggle-nodes APPLY=1' and 'make vault')"; fi; \
 	exit $$missing
 
 ci: lint test build ## Run lint, test and build in pipeline order
@@ -100,25 +106,30 @@ install-tools: ## Install the Terraform and platform command-line dependencies
 	winget install --id Kubernetes.kubectl -e
 
 login: ## Authenticate the Infisical CLI
-	infisical login
+	$(INFISICAL) login
 
 init: ## Initialize Terraform providers and backend
 	terraform init
 
-plan: ## Show the proposed infrastructure changes
-	powershell -NoProfile -ExecutionPolicy Bypass -Command ". ./scripts/ensure-secrets.ps1; terraform plan"
+plan: verify-vault ## Show the proposed infrastructure changes
+	$(INFISICAL) run --env=$(INFISICAL_BOOTSTRAP_ENV) --path=$(INFISICAL_BOOTSTRAP_PATH) --projectId=$(INFISICAL_PROJECT_ID) -- powershell -NoProfile -ExecutionPolicy Bypass -Command 'try { . ./scripts/ensure-secrets.ps1; $$ErrorActionPreference = "Continue"; terraform plan; exit $$LASTEXITCODE } catch { Write-Error $$_; exit 1 }'
 
-apply: ## Apply reviewed infrastructure changes
-	powershell -NoProfile -ExecutionPolicy Bypass -Command ". ./scripts/ensure-secrets.ps1; terraform apply"
+apply: verify-vault ## Apply reviewed infrastructure changes
+	$(INFISICAL) run --env=$(INFISICAL_BOOTSTRAP_ENV) --path=$(INFISICAL_BOOTSTRAP_PATH) --projectId=$(INFISICAL_PROJECT_ID) -- powershell -NoProfile -ExecutionPolicy Bypass -Command 'try { . ./scripts/ensure-secrets.ps1; $$ErrorActionPreference = "Continue"; terraform apply; exit $$LASTEXITCODE } catch { Write-Error $$_; exit 1 }'
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-gitops.ps1
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active true
 
-destroy: ## Destroy all infrastructure
-	powershell -NoProfile -ExecutionPolicy Bypass -Command ". ./scripts/ensure-secrets.ps1; terraform destroy"
+destroy: verify-vault ## Destroy all infrastructure
+	$(INFISICAL) run --env=$(INFISICAL_BOOTSTRAP_ENV) --path=$(INFISICAL_BOOTSTRAP_PATH) --projectId=$(INFISICAL_PROJECT_ID) -- powershell -NoProfile -ExecutionPolicy Bypass -Command 'try { . ./scripts/ensure-secrets.ps1; $$ErrorActionPreference = "Continue"; terraform destroy; exit $$LASTEXITCODE } catch { Write-Error $$_; exit 1 }'
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active false
 
+ifeq ($(APPLY),1)
+toggle-nodes: verify-vault ## Set node-pool capacity (NODES=0, optionally APPLY=1)
+	MSYS_NO_PATHCONV=1 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/toggle-nodes.ps1 -NodeCount $(NODES) -Apply -InfisicalEnvironment "$(INFISICAL_BOOTSTRAP_ENV)" -InfisicalPath "$(INFISICAL_BOOTSTRAP_PATH)" -InfisicalProjectId "$(INFISICAL_PROJECT_ID)"
+else
 toggle-nodes: ## Set node-pool capacity (NODES=0, optionally APPLY=1)
-	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/toggle-nodes.ps1 -NodeCount $(NODES) $(if $(APPLY),-Apply)
+	MSYS_NO_PATHCONV=1 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/toggle-nodes.ps1 -NodeCount $(NODES) -InfisicalEnvironment "$(INFISICAL_BOOTSTRAP_ENV)" -InfisicalPath "$(INFISICAL_BOOTSTRAP_PATH)" -InfisicalProjectId "$(INFISICAL_PROJECT_ID)"
+endif
 
 check-environments: ## Re-trigger the environment status workflow on all app repos, without changing ephemerality.json
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/trigger-environment-checks.ps1

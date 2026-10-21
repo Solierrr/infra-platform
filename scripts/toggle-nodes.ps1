@@ -14,40 +14,109 @@ param(
     [Parameter(Mandatory = $true)]
     [int]$NodeCount,
 
-    [switch]$Apply
+    [switch]$Apply,
+
+    [string]$InfisicalEnvironment = "prod",
+
+    [string]$InfisicalPath = "/infisical",
+
+    [string]$InfisicalProjectId = "2296d19c-5f3b-41e1-afa3-fcde39966a71"
 )
 
 $ErrorActionPreference = "Stop"
 
-if (git status --porcelain) {
-    Write-Error "Working tree has uncommitted changes. Commit or stash them first."
-    exit 1
+function Invoke-NativeCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Command,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments,
+
+        [switch]$CaptureOutput
+    )
+
+    $output = & $Command @Arguments 2>&1
+
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        throw "$Command $($Arguments -join ' ') falhou com codigo $exitCode."
+    }
+
+    if ($CaptureOutput) {
+        return (($output -join [Environment]::NewLine).Trim())
+    }
+
+    return $output
 }
 
-git checkout main
-git pull origin main
+$workingTree = Invoke-NativeCommand -Command "git" -Arguments @("status", "--porcelain") -CaptureOutput
+if (-not [string]::IsNullOrWhiteSpace($workingTree)) {
+    throw "Working tree has uncommitted changes. Commit or stash them first."
+}
+
+Invoke-NativeCommand -Command "git" -Arguments @("checkout", "main")
+Invoke-NativeCommand -Command "git" -Arguments @("pull", "origin", "main")
+
+if ($Apply) {
+    $infisical = Get-Command "infisical.exe" -ErrorAction Stop
+}
 
 $action = if ($NodeCount -eq 0) { "pause" } else { "resume" }
 $branch = "chore/scale-nodes-to-$NodeCount-$(Get-Date -Format 'yyyyMMddHHmmss')"
-git checkout -b $branch
+Invoke-NativeCommand -Command "git" -Arguments @("checkout", "-b", $branch)
 
 $mainTfPath = (Resolve-Path main.tf).Path
 $content = (Get-Content $mainTfPath -Raw) -replace 'node_count = \d+', "node_count = $NodeCount"
 [System.IO.File]::WriteAllText($mainTfPath, $content, (New-Object System.Text.UTF8Encoding($false)))
 
-if (-not (git status --porcelain)) {
+if ([string]::IsNullOrWhiteSpace((Invoke-NativeCommand -Command "git" -Arguments @("status", "--porcelain") -CaptureOutput))) {
     Write-Host "node_count já está em $NodeCount - nada pra commitar, sem PR." -ForegroundColor Yellow
-    git checkout main
-    git branch -D $branch | Out-Null
+    Invoke-NativeCommand -Command "git" -Arguments @("checkout", "main")
+    Invoke-NativeCommand -Command "git" -Arguments @("branch", "-D", $branch)
     exit 0
 }
 
-git add main.tf
-git commit -m "chore: $action node pool (node_count = $NodeCount)"
-git push -u origin $branch
+$planFile = $null
+try {
+    if ($Apply) {
+        # Terraform plan files can contain sensitive values. Keep this one in the OS temp directory
+        # and remove it in finally after applying the exact plan that was checked below.
+        $planFile = Join-Path ([System.IO.Path]::GetTempPath()) "infra-platform-toggle-$([guid]::NewGuid().ToString('N')).tfplan"
+        $terraformScript = Join-Path $PSScriptRoot "terraform-toggle.ps1"
+        $planArgs = @(
+            "run",
+            "--env=$InfisicalEnvironment",
+            "--path=$InfisicalPath",
+            "--projectId=$InfisicalProjectId",
+            "--",
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            $terraformScript,
+            "-Mode",
+            "Plan",
+            "-NodeCount",
+            "$NodeCount",
+            "-PlanFile",
+            $planFile
+        )
 
-$title = "`[AUTO]` chore: scale node pool to $NodeCount"
-$body = @"
+        & $infisical.Source @planArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "O plano Terraform falhou ou inclui mudancas fora do node_count; nenhuma PR foi criada ou mesclada. A branch local '$branch' contem a alteracao pendente."
+        }
+    }
+
+    Invoke-NativeCommand -Command "git" -Arguments @("add", "main.tf")
+    Invoke-NativeCommand -Command "git" -Arguments @("commit", "-m", "chore: $action node pool (node_count = $NodeCount)")
+    $branchCommit = Invoke-NativeCommand -Command "git" -Arguments @("rev-parse", "HEAD") -CaptureOutput
+    Invoke-NativeCommand -Command "git" -Arguments @("push", "-u", "origin", $branch)
+
+    $title = "`[AUTO]` chore: scale node pool to $NodeCount"
+    $body = @"
 ## Objetivo
 
 $(if ($NodeCount -eq 0) { "Pausar o cluster entre sessões de estudo - zera custo de node/disco sem derrubar o control plane nem o IP do Kong." } else { "Retomar o cluster para uma sessão de estudo." })
@@ -71,19 +140,57 @@ Rodar o script de novo com o valor anterior de ``node_count``.
 Closes #
 "@
 
-$prUrl = gh pr create --title $title --body $body
-$prNumber = ($prUrl -split '/')[-1]
-gh pr merge $prNumber --merge --admin
+    $prOutput = Invoke-NativeCommand -Command "gh" -Arguments @("pr", "create", "--title", $title, "--body", $body) -CaptureOutput
+    $prUrlMatch = [regex]::Match($prOutput, 'https://\S+/pull/\d+')
+    if (-not $prUrlMatch.Success) {
+        throw "gh pr create nao retornou uma URL de PR valida: $prOutput"
+    }
+    $prUrl = $prUrlMatch.Value
+    $prNumber = ($prUrl -split '/')[-1]
+    Invoke-NativeCommand -Command "gh" -Arguments @("pr", "merge", $prNumber, "--merge", "--admin")
 
-git checkout main
-git pull origin main
+    Invoke-NativeCommand -Command "git" -Arguments @("checkout", "main")
+    Invoke-NativeCommand -Command "git" -Arguments @("pull", "origin", "main")
+    Invoke-NativeCommand -Command "git" -Arguments @("merge-base", "--is-ancestor", $branchCommit, "main")
 
-if ($Apply) {
-    terraform apply -auto-approve
+    if ($Apply) {
+        $applyArgs = @(
+            "run",
+            "--env=$InfisicalEnvironment",
+            "--path=$InfisicalPath",
+            "--projectId=$InfisicalProjectId",
+            "--",
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            $terraformScript,
+            "-Mode",
+            "Apply",
+            "-PlanFile",
+            $planFile
+        )
+
+        & $infisical.Source @applyArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "terraform apply do plano validado falhou depois do merge da PR $prUrl."
+        }
+    }
+
+    Write-Host ""
+    Write-Host "PR: $prUrl" -ForegroundColor Cyan
+    if (-not $Apply) {
+        Write-Host "Merged. Run 'make apply' to actually apply it." -ForegroundColor Yellow
+    }
 }
-
-Write-Host ""
-Write-Host "PR: $prUrl" -ForegroundColor Cyan
-if (-not $Apply) {
-    Write-Host "Merged. Run 'terraform apply' to actually apply it." -ForegroundColor Yellow
+finally {
+    if ($planFile -and (Test-Path -LiteralPath $planFile)) {
+        try {
+            Remove-Item -LiteralPath $planFile -Force -ErrorAction Stop
+        }
+        catch {
+            Write-Warning "Nao foi possivel remover o plano Terraform temporario: $planFile"
+        }
+    }
 }
