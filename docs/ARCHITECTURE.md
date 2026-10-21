@@ -1,6 +1,6 @@
 # Arquitetura do Repositório
 
-Este repositório segue a arquitetura padrão de um projeto Terraform da organização: um conjunto de arquivos `.tf` na raiz, sem subpastas de módulo, já que o escopo é um único cluster GKE com seus recursos de rede e as instalações Helm/Kubernetes que rodam dentro dele. `main.tf` concentra os recursos de infraestrutura propriamente ditos (rede, cluster, node pool, ArgoCD, Kong, cert-manager e os `ClusterIssuer` do Let's Encrypt), `secrets.tf` concentra exclusivamente a distribuição de segredos de aplicação lidos do Infisical para dentro do cluster, e `variables.tf`/`versions.tf`/`output.tf` cuidam, respectivamente, de parâmetros de entrada, providers/backends e valores expostos após o `apply`. Os scripts em `scripts/` não fazem parte do plano do Terraform em si — são ferramentas PowerShell de apoio específicas da plataforma. As variáveis do Infisical vêm de `make vault`, o alvo padrão do Makefile da organização.
+Este repositório segue a arquitetura padrão de um projeto Terraform da organização: um conjunto de arquivos `.tf` na raiz, sem subpastas de módulo, já que o escopo é um único cluster GKE com seus recursos de rede e as instalações Helm/Kubernetes que rodam dentro dele. `main.tf` concentra os recursos de infraestrutura propriamente ditos (rede, cluster, node pool, ArgoCD, Kong, cert-manager e certificados TLS), `secrets.tf` concentra exclusivamente a distribuição de segredos de aplicação lidos do Infisical para dentro do cluster, e `variables.tf`/`versions.tf`/`output.tf` cuidam, respectivamente, de parâmetros de entrada, providers/backends e valores expostos após o apply. Os scripts em `scripts/` são ferramentas PowerShell de apoio específicas da plataforma. `make plan`, `make apply`, `make destroy` e `make toggle-nodes ... APPLY=1` usam `infisical run` para injetar as credenciais de bootstrap do provider; `make vault` continua extraindo segredos de aplicação para um arquivo `.env` quando necessário.
 
 <p>
   <a href="https://github.com/syvixor/skills-icons">
@@ -33,10 +33,10 @@ Concentra a ponte entre o vault [Infisical](https://infisical.com) (autenticado 
 
 ## Papel dos scripts em `scripts/`
 
-- `toggle-nodes.ps1`, automatiza a escala do node pool: edita o `node_count` em `main.tf`, cria uma branch, comita, abre e faz merge de uma PR (`gh pr create` / `gh pr merge --admin`) e, opcionalmente (`-Apply`), roda `terraform apply -auto-approve` — garantindo que o state do Terraform nunca fique divergente do que está de fato aplicado.
-- `secrets.template.ps1`, template para o arquivo local `scripts/secrets.local.ps1` (ignorado pelo `.gitignore`), que exporta as variáveis `TF_VAR_*` consumidas pelo Terraform antes de um `plan`/`apply` — client ID/secret da Machine Identity `gke-sync` do Infisical (usada por `secrets.tf` pra buscar as credenciais reais de cada serviço em `env=prod`), a senha do ArgoCD, o token do Cloudflare e o e-mail do ACME. Não inclui mais credencial por serviço nem conversão de keystore `.p12` — isso já vem pronto do Infisical (`JWT_KEYSTORE_BASE64` em `/auth`).
+- `toggle-nodes.ps1`, automatiza a escala do node pool: edita o `node_count` em `main.tf`, cria uma branch, comita, abre e faz merge de uma PR (`gh pr create` / `gh pr merge --admin`) e, opcionalmente (`-Apply`), aplica com as credenciais de bootstrap injetadas pelo Infisical. Quando `-Apply` é usado, salva um plano temporário, verifica que somente `google_container_node_pool.primary_nodes.node_count` muda para o valor pedido, e aplica esse mesmo plano depois de confirmar que o commit da PR chegou a `main`. O arquivo de plano pode conter valores sensíveis; fica na pasta temporária do sistema e é removido ao final do script.
+- `ensure-secrets.ps1`, valida as credenciais de bootstrap injetadas pelo Infisical CLI, mapeia-as para as variáveis `TF_VAR_*` do provider e detecta o IP público atual para o acesso ao control plane do GKE. As credenciais não são gravadas em arquivo local.
 
-Os alvos `plan`, `apply`, `destroy`, `toggle-nodes` e `check-environments` do `Makefile` chamam os scripts PowerShell desta pasta e são a exceção ao Makefile padrão da organização (`docs-warehouse/templates/make/`), que não usa PowerShell.
+Os alvos `plan`, `apply`, `destroy`, `toggle-nodes` e `check-environments` do `Makefile` chamam comandos ou scripts PowerShell desta pasta e são a exceção ao Makefile padrão da organização (`docs-warehouse/templates/make/`), que não usa PowerShell. `toggle-nodes` só requer Infisical quando `APPLY=1`; o plano verifica o acesso dos providers antes de criar e mesclar a PR.
 
 ```Tree do Repositório
 ├── .github/
@@ -44,7 +44,8 @@ Os alvos `plan`, `apply`, `destroy`, `toggle-nodes` e `check-environments` do `M
 │   ├── CONTRIBUTING.md
 │   └── pull_request_template.md
 ├── scripts/
-│   ├── secrets.template.ps1
+│   ├── ensure-secrets.ps1
+│   ├── terraform-toggle.ps1
 │   └── toggle-nodes.ps1
 ├── README.md
 ├── ARCHITECTURE.md
