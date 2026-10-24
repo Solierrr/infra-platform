@@ -32,6 +32,13 @@ data "infisical_secrets" "service_urls" {
   folder_path  = "/service-urls"
 }
 
+# Credenciais do FCM (Firebase Cloud Messaging), consumidas pelo api-notify.
+data "infisical_secrets" "fcm" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/fcm"
+}
+
 # --- api-messenger --------------------------------------------------------
 
 resource "kubernetes_secret" "api_messenger" {
@@ -55,6 +62,42 @@ resource "kubernetes_secret" "api_messenger" {
       for name, secret in data.infisical_secrets.service_urls.secrets :
       name => secret.value
       if contains(["JWT_JWK_SET_URI", "AUTH_SERVICE_URL", "PERSISTENCE_BASE_URL"], name)
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+# --- api-notify -----------------------------------------------------------
+
+resource "kubernetes_secret" "api_notify" {
+  metadata {
+    name      = "api-notify-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      for name, secret in data.infisical_secrets.database.secrets :
+      name => secret.value
+      if contains(["DB_MONGO_URI", "DB_MONGO_NOTIFY"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.auth.secrets :
+      name => secret.value
+      if contains(["SERVICE_KEY_API_MESSENGER", "SERVICE_KEY_API_CORE"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.fcm.secrets :
+      name => secret.value
+      if contains(["FCM_ENABLED", "FCM_CREDENTIALS_BASE64", "FIREBASE_PROJECT_ID"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.service_urls.secrets :
+      name => secret.value
+      if contains(["JWT_JWK_SET_URI"], name)
     },
   )
 
