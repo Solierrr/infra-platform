@@ -32,6 +32,12 @@ data "infisical_secrets" "service_urls" {
   folder_path  = "/service-urls"
 }
 
+data "infisical_secrets" "service_keys" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/service-keys"
+}
+
 # Credenciais do FCM (Firebase Cloud Messaging), consumidas pelo api-notify.
 data "infisical_secrets" "fcm" {
   env_slug     = "prod"
@@ -54,9 +60,12 @@ resource "kubernetes_secret" "api_messenger" {
       if contains(["DB_MONGO_URI", "DB_MONGO_MESSENGER"], name)
     },
     {
-      for name, secret in data.infisical_secrets.auth.secrets :
+      SERVICE_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_MESSENGER"].value
+    },
+    {
+      for name, secret in data.infisical_secrets.service_keys.secrets :
       name => secret.value
-      if contains(["SERVICE_JWT_SECRET", "SERVICE_CLIENT_SECRET"], name)
+      if contains(["SERVICE_KEY_AI_ASSISTANT", "SERVICE_KEY_AI_OPERATIONAL", "SERVICE_KEY_AI_GEOGRAPHIC"], name)
     },
     {
       for name, secret in data.infisical_secrets.service_urls.secrets :
@@ -85,7 +94,7 @@ resource "kubernetes_secret" "api_notify" {
       if contains(["DB_MONGO_URI", "DB_MONGO_NOTIFY"], name)
     },
     {
-      for name, secret in data.infisical_secrets.auth.secrets :
+      for name, secret in data.infisical_secrets.service_keys.secrets :
       name => secret.value
       if contains(["SERVICE_KEY_API_MESSENGER", "SERVICE_KEY_API_CORE"], name)
     },
@@ -147,6 +156,11 @@ resource "kubernetes_secret" "api_core" {
     { for name, secret in data.infisical_secrets.cloudinary.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.google.secrets : name => secret.value },
     {
+      for name, secret in data.infisical_secrets.service_keys.secrets :
+      name => secret.value
+      if contains(["SERVICE_KEY_API_AUTH", "SERVICE_KEY_API_MESSENGER"], name)
+    },
+    {
       for name, secret in data.infisical_secrets.service_urls.secrets :
       name => secret.value
       if contains(["JWT_JWK_SET_URI"], name)
@@ -176,6 +190,9 @@ resource "kubernetes_secret" "api_auth" {
     { for name, secret in data.infisical_secrets.database.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.redis.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.auth.secrets : name => secret.value },
+    {
+      SERVICE_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_AUTH"].value
+    },
     {
       for name, secret in data.infisical_secrets.service_urls.secrets :
       name => secret.value
@@ -314,6 +331,9 @@ resource "kubernetes_secret" "ai_assistant" {
       API_MESSENGER_URL = data.infisical_secrets.service_urls.secrets["API_MESSENGER_URL"].value
       JWT_JWKS_URL      = data.infisical_secrets.service_urls.secrets["JWT_JWK_SET_URI"].value
       MCP_URL           = data.infisical_secrets.service_urls.secrets["MCP_URL"].value
+    },
+    {
+      SERVICE_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_AI_ASSISTANT"].value
     },
   )
 
