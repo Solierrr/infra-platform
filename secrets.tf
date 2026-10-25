@@ -158,7 +158,7 @@ resource "kubernetes_secret" "api_core" {
     {
       for name, secret in data.infisical_secrets.service_keys.secrets :
       name => secret.value
-      if contains(["SERVICE_KEY_API_AUTH", "SERVICE_KEY_API_MESSENGER"], name)
+      if contains(["SERVICE_KEY_API_AUTH", "SERVICE_KEY_API_MESSENGER", "SERVICE_KEY_MCP_DATABASE"], name)
     },
     {
       for name, secret in data.infisical_secrets.service_urls.secrets :
@@ -174,8 +174,9 @@ resource "kubernetes_secret" "api_core" {
 
 # --- api-auth -------------------------------------------------------------
 # Secrets lidos do Infisical (env prod) - reusa os data sources /database e
-# /redis já declarados acima (mesma instância Postgres/Upstash do api-core,
-# só muda DB_POSTGRES_AUTH em vez de DB_POSTGRES_CORE) + /auth.
+# /redis já declarados acima (mesma instância Postgres do api-core, só muda
+# DB_POSTGRES_AUTH em vez de DB_POSTGRES_CORE; Redis próprio via UPSTASH_AUTH_*)
+# + /auth.
 
 resource "kubernetes_secret" "api_auth" {
   metadata {
@@ -184,7 +185,7 @@ resource "kubernetes_secret" "api_auth" {
   }
 
   # Traz junto chaves que o api-auth não usa (DB_POSTGRES_CORE,
-  # UPSTASH_CORE_USERNAME/PASSWORD, SERVICE_JWT_SECRET, etc.) - inofensivo,
+  # UPSTASH_CORE_*, SERVICE_JWT_SECRET, etc.) - inofensivo,
   # as pastas são compartilhadas e o Spring só lê o que conhece.
   data = merge(
     { for name, secret in data.infisical_secrets.database.secrets : name => secret.value },
@@ -192,6 +193,9 @@ resource "kubernetes_secret" "api_auth" {
     { for name, secret in data.infisical_secrets.auth.secrets : name => secret.value },
     {
       SERVICE_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_AUTH"].value
+    },
+    {
+      SERVICE_KEY_GOOGLE_REGISTRY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_GOOGLE_REGISTRY"].value
     },
     {
       for name, secret in data.infisical_secrets.service_urls.secrets :
@@ -221,8 +225,7 @@ resource "kubernetes_secret" "api_auth_jwt_keystore" {
 }
 
 # --- api-recommendation ----------------------------------------------------
-# Reusa /database (Postgres somente-leitura + Neo4j) e soma a pasta
-# /recommendation (chaves de API do motor de recomendação, não são
+# Neo4j vem de /feeddb e soma a pasta /recommendation (chaves de API do motor de recomendação, não são
 # credencial de nenhuma tecnologia compartilhada).
 
 data "infisical_secrets" "recommendation" {
@@ -238,7 +241,6 @@ resource "kubernetes_secret" "api_recommendation" {
   }
 
   data = merge(
-    { for name, secret in data.infisical_secrets.database.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.recommendation.secrets : name => secret.value },
     {
       for name, secret in data.infisical_secrets.feeddb.secrets :
@@ -253,8 +255,8 @@ resource "kubernetes_secret" "api_recommendation" {
 }
 
 # --- api-mcp (api-database-mcp) --------------------------------------------
-# Reusa /database (Postgres "Negócio") e soma a pasta /mcp (chave de API
-# própria do serviço).
+# Soma a pasta /mcp (chave de API própria do serviço) e a service key de
+# chamada ao api-core; sem acesso direto a banco.
 
 data "infisical_secrets" "mcp" {
   env_slug     = "prod"
@@ -269,12 +271,10 @@ resource "kubernetes_secret" "api_mcp" {
   }
 
   data = merge(
-    {
-      for name, secret in data.infisical_secrets.database.secrets :
-      name => secret.value
-      if contains(["DB_POSTGRES_HOST", "DB_POSTGRES_PORT", "DB_POSTGRES_USER", "DB_POSTGRES_PASSWORD", "DB_POSTGRES_BUSINESS"], name)
-    },
     { for name, secret in data.infisical_secrets.mcp.secrets : name => secret.value },
+    {
+      SERVICE_KEY_CORE = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_MCP_DATABASE"].value
+    },
   )
 
   type = "Opaque"
@@ -283,8 +283,7 @@ resource "kubernetes_secret" "api_mcp" {
 }
 
 # --- ai-assistant -----------------------------------------------------------
-# Mongo (checkpointer de curto prazo), Redis próprio dos agentes (Upstash) e
-# chaves de LLM.
+# Mongo (checkpointer de curto prazo) e chaves de LLM.
 
 data "infisical_secrets" "llm" {
   env_slug     = "prod"
@@ -307,14 +306,7 @@ resource "kubernetes_secret" "ai_assistant" {
     {
       for name, secret in data.infisical_secrets.database.secrets :
       name => secret.value
-      if contains(["QDRANT_URL", "QDRANT_API_KEY"], name)
-    },
-    # UPSTASH_REDIS_* (não UPSTASH_AGENTS_*) - nome esperado por settings.py.
-    {
-      UPSTASH_REDIS_HOST     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_HOST"].value
-      UPSTASH_REDIS_PORT     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PORT"].value
-      UPSTASH_REDIS_USERNAME = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_USERNAME"].value
-      UPSTASH_REDIS_PASSWORD = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PASSWORD"].value
+      if contains(["QDRANT_URL", "QDRANT_API_KEY", "DB_MONGO_AGENTS"], name)
     },
     {
       for name, secret in data.infisical_secrets.llm.secrets :
@@ -389,7 +381,8 @@ resource "kubernetes_secret" "google_registry" {
 # --- feeddb e database-bootstrap ---------------------------------------------
 # Neo4j self-hosted (grafo descartável) e o job que o reconstrói a partir do
 # Postgres. /feeddb guarda só as credenciais do Neo4j; o Postgres vem de
-# /database, restrito às chaves que o job lê.
+# /database, restrito às chaves que o job lê, com o login do papel
+# ro_bootstrap no lugar da credencial administradora.
 
 data "infisical_secrets" "feeddb" {
   env_slug     = "prod"
@@ -422,7 +415,11 @@ resource "kubernetes_secret" "database_bootstrap" {
     {
       for name, secret in data.infisical_secrets.database.secrets :
       name => secret.value
-      if contains(["DB_POSTGRES_HOST", "DB_POSTGRES_PORT", "DB_POSTGRES_CORE", "DB_POSTGRES_USER", "DB_POSTGRES_PASSWORD", "DB_POSTGRES_SSLMODE"], name)
+      if contains(["DB_POSTGRES_HOST", "DB_POSTGRES_PORT", "DB_POSTGRES_CORE", "DB_POSTGRES_SSLMODE"], name)
+    },
+    {
+      DB_POSTGRES_USER     = data.infisical_secrets.database.secrets["DB_POSTGRES_RO_BOOTSTRAP_USER"].value
+      DB_POSTGRES_PASSWORD = data.infisical_secrets.database.secrets["DB_POSTGRES_RO_BOOTSTRAP_PASSWORD"].value
     },
     {
       for name, secret in data.infisical_secrets.feeddb.secrets :
