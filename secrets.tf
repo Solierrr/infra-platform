@@ -38,6 +38,14 @@ data "infisical_secrets" "service_keys" {
   folder_path  = "/service-keys"
 }
 
+# Telemetria: endereço do coletor OpenTelemetry e atributos do ambiente,
+# consumidos pelos serviços que exportam métricas, traces e logs.
+data "infisical_secrets" "otel" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/otel"
+}
+
 # Credenciais do FCM (Firebase Cloud Messaging), consumidas pelo api-notify.
 data "infisical_secrets" "fcm" {
   env_slug     = "prod"
@@ -103,6 +111,7 @@ resource "kubernetes_secret" "api_notify" {
       name => secret.value
       if contains(["FCM_ENABLED", "FCM_CREDENTIALS_BASE64", "FIREBASE_PROJECT_ID"], name)
     },
+    { for name, secret in data.infisical_secrets.otel.secrets : name => secret.value },
     {
       for name, secret in data.infisical_secrets.service_urls.secrets :
       name => secret.value
@@ -155,6 +164,7 @@ resource "kubernetes_secret" "api_core" {
     { for name, secret in data.infisical_secrets.redis.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.cloudinary.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.google.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.otel.secrets : name => secret.value },
     {
       for name, secret in data.infisical_secrets.service_keys.secrets :
       name => secret.value
@@ -190,6 +200,7 @@ resource "kubernetes_secret" "api_auth" {
     { for name, secret in data.infisical_secrets.database.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.redis.secrets : name => secret.value },
     { for name, secret in data.infisical_secrets.auth.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.otel.secrets : name => secret.value },
     {
       SERVICE_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_AUTH"].value
     },
