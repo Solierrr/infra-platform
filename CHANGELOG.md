@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0](https://github.com/Solierrr/infra-platform/compare/v1.0.0...v1.1.0) (2026-10-27)
+
+
+### Features
+
+* add api-notify kubernetes secret ([#73](https://github.com/Solierrr/infra-platform/issues/73)) ([6909216](https://github.com/Solierrr/infra-platform/commit/69092167ec383435e375d40949168543733ba722))
+* deliver the telemetry settings to the service secrets ([#77](https://github.com/Solierrr/infra-platform/issues/77)) ([0f07fea](https://github.com/Solierrr/infra-platform/commit/0f07fead16f94631736c5a5fbd954d40fddc31ec))
+* pass one llm key per provider to the ai services and drop the registry llm keys ([#68](https://github.com/Solierrr/infra-platform/issues/68)) ([0c3f194](https://github.com/Solierrr/infra-platform/commit/0c3f1943898df325457a78f2c95cedda16d17993))
+* read the service keys into the kubernetes secrets ([#74](https://github.com/Solierrr/infra-platform/issues/74)) ([3ff3a83](https://github.com/Solierrr/infra-platform/commit/3ff3a832338b32059621b26e3b7cbf3f0f3e5461))
+
+
+### Bug Fixes
+
+* stop managing the apex dns record that a worker owns ([#71](https://github.com/Solierrr/infra-platform/issues/71)) ([95127b1](https://github.com/Solierrr/infra-platform/commit/95127b1b3710c4b7c177b6af4682ae8c96c24881))
+
 ## 1.0.0 (2026-10-15)
 
 
