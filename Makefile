@@ -3,7 +3,7 @@
 # Requer: make e sh (Git Bash no Windows). Para `make vault`: Infisical CLI e `infisical login`.
 
 # ---- especifico deste repositorio ----
-VAULT_FOLDERS ?=
+VAULT_FOLDERS ?= /infisical
 INSTALL_CMD   ?= terraform init -backend=false
 DEV_CMD       ?=
 BUILD_CMD     ?= terraform validate
@@ -90,7 +90,7 @@ doctor: ## Check that the tools this repository needs are available
 ci: lint test build ## Run lint, test and build in pipeline order
 
 # ---- alvos proprios ----
-.PHONY: install-tools login init plan apply destroy toggle-nodes check-environments
+.PHONY: install-tools login init cluster-env plan apply destroy toggle-nodes check-environments
 
 install-tools: ## Install the Terraform and platform command-line dependencies
 	winget install --id Hashicorp.Terraform -e
@@ -105,15 +105,18 @@ login: ## Authenticate the Infisical CLI
 init: ## Initialize Terraform providers and backend
 	terraform init
 
-plan: ## Show the proposed infrastructure changes
+cluster-env: ## Write .env with the Terraform credentials from the Infisical prod folder /infisical
+	@$(MAKE) --no-print-directory vault ENV=prod || echo "WARN: could not write .env from Infisical; scripts/secrets.local.ps1 or a prompt will be used instead."
+
+plan: cluster-env ## Show the proposed infrastructure changes
 	powershell -NoProfile -ExecutionPolicy Bypass -Command ". ./scripts/ensure-secrets.ps1; terraform plan"
 
-apply: ## Apply reviewed infrastructure changes
+apply: cluster-env ## Apply reviewed infrastructure changes
 	powershell -NoProfile -ExecutionPolicy Bypass -Command ". ./scripts/ensure-secrets.ps1; terraform apply"
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/bootstrap-gitops.ps1
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active true
 
-destroy: ## Destroy all infrastructure
+destroy: cluster-env ## Destroy all infrastructure
 	powershell -NoProfile -ExecutionPolicy Bypass -Command ". ./scripts/ensure-secrets.ps1; terraform destroy"
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-cluster-state.ps1 -Active false
 
