@@ -447,6 +447,33 @@ resource "kubernetes_secret" "database_bootstrap" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
+# --- ai-accessibility -------------------------------------------------------
+# Só chaves de LLM e o token interno que o serviço exige no Bearer
+# (INTERNAL_API_TOKEN recebe a service key do ai-accessibility), sem banco.
+
+resource "kubernetes_secret" "ai_accessibility" {
+  metadata {
+    name      = "ai-accessibility-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      for name, secret in data.infisical_secrets.llm.secrets :
+      name => secret.value
+      if contains(["GEMINI_API_KEY", "GROQ_API_KEY"], name)
+    },
+    {
+      INTERNAL_API_TOKEN = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_AI_ACCESSIBILITY"].value
+      JWT_JWKS_URL       = data.infisical_secrets.service_urls.secrets["JWT_JWK_SET_URI"].value
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
 # --- web-app ------------------------------------------------------------
 # Propositalmente sem kubernetes_secret: web-app é uma SPA estática (Vite +
 # nginx) - as VITE_* são embutidas no bundle em build time (npm run build),
