@@ -191,7 +191,7 @@ resource "kubernetes_secret" "api_core" {
     {
       for name, secret in data.infisical_secrets.service_urls.secrets :
       name => secret.value
-      if contains(["JWT_JWK_SET_URI"], name)
+      if contains(["JWT_JWK_SET_URI", "AUTH_SERVICE_URL"], name)
     },
   )
 
