@@ -522,6 +522,49 @@ resource "kubernetes_secret" "ai_geographic" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
+# --- ai-operational ---------------------------------------------------------
+# Mesmo desenho do ai-assistant, com o MCP do mcp-database (a MCP_URL vem do
+# Deployment, porque o valor do Infisical ainda usa o nome antigo api-mcp) e o
+# api-core, cuja URL também é fixada no Deployment.
+
+resource "kubernetes_secret" "ai_operational" {
+  metadata {
+    name      = "ai-operational-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      MONGO_URI = data.infisical_secrets.database.secrets["DB_MONGO_URI"].value
+    },
+    {
+      UPSTASH_REDIS_HOST     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_HOST"].value
+      UPSTASH_REDIS_PORT     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PORT"].value
+      UPSTASH_REDIS_USERNAME = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_USERNAME"].value
+      UPSTASH_REDIS_PASSWORD = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PASSWORD"].value
+    },
+    {
+      for name, secret in data.infisical_secrets.llm.secrets :
+      name => secret.value
+      if contains(["GEMINI_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "LLM_MODEL_GEMINI", "LLM_MODEL_OPENAI", "LLM_PROVIDER_ORDER"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.mcp.secrets :
+      name => secret.value
+      if contains(["MCP_API_KEY"], name)
+    },
+    {
+      API_MESSENGER_URL = data.infisical_secrets.service_urls.secrets["API_MESSENGER_URL"].value
+      JWT_JWKS_URL      = data.infisical_secrets.service_urls.secrets["JWT_JWK_SET_URI"].value
+      SERVICE_KEY       = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_AI_OPERATIONAL"].value
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
 # --- web-app ------------------------------------------------------------
 # Propositalmente sem kubernetes_secret: web-app é uma SPA estática (Vite +
 # nginx) - as VITE_* são embutidas no bundle em build time (npm run build),
