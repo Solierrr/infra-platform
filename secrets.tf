@@ -189,6 +189,9 @@ resource "kubernetes_secret" "api_core" {
       if contains(["SERVICE_KEY_API_AUTH", "SERVICE_KEY_API_MESSENGER"], name)
     },
     {
+      API_EMAIL_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_EMAIL"].value
+    },
+    {
       for name, secret in data.infisical_secrets.service_urls.secrets :
       name => secret.value
       if contains(["JWT_JWK_SET_URI", "AUTH_SERVICE_URL"], name)
