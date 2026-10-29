@@ -263,7 +263,7 @@ resource "kubernetes_secret" "api_recommendation" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
-# --- api-mcp (api-database-mcp) --------------------------------------------
+# --- mcp-database (ex-api-mcp) ---------------------------------------------
 # Reusa /database (Postgres "Negócio") e soma a pasta /mcp (chave de API
 # própria do serviço).
 
@@ -275,7 +275,7 @@ data "infisical_secrets" "mcp" {
 
 resource "kubernetes_secret" "api_mcp" {
   metadata {
-    name      = "api-mcp-secrets"
+    name      = "mcp-database-secrets"
     namespace = "default"
   }
 
