@@ -598,6 +598,33 @@ resource "kubernetes_secret" "api_email" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
+# --- infra-broker -----------------------------------------------------------
+# RabbitMQ com STOMP, relay do WebSocket do api-messenger. A pasta /broker tem
+# o usuário e a senha, que o api-messenger usa iguais; a imagem lê o usuário
+# inicial de RABBITMQ_DEFAULT_USER e RABBITMQ_DEFAULT_PASS.
+
+data "infisical_secrets" "broker" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/broker"
+}
+
+resource "kubernetes_secret" "infra_broker" {
+  metadata {
+    name      = "infra-broker-secrets"
+    namespace = "default"
+  }
+
+  data = {
+    RABBITMQ_DEFAULT_USER = data.infisical_secrets.broker.secrets["RABBITMQ_USER"].value
+    RABBITMQ_DEFAULT_PASS = data.infisical_secrets.broker.secrets["RABBITMQ_PASSWORD"].value
+  }
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
 # --- web-app ------------------------------------------------------------
 # Propositalmente sem kubernetes_secret: web-app é uma SPA estática (Vite +
 # nginx) - as VITE_* são embutidas no bundle em build time (npm run build),
