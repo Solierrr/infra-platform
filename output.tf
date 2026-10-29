@@ -29,3 +29,9 @@ output "argocd_port_forward_command" {
   description = "Run this to reach the ArgoCD UI at https://localhost:8080"
   value       = "kubectl -n argocd port-forward svc/argocd-server 8080:443"
 }
+
+output "grafana_admin_password" {
+  description = "Senha do usuário admin do Grafana (infra-grafana), gerada pelo Terraform"
+  value       = random_password.grafana_admin.result
+  sensitive   = true
+}

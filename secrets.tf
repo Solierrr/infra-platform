@@ -80,6 +80,24 @@ resource "kubernetes_secret" "api_messenger" {
       name => secret.value
       if contains(["JWT_JWK_SET_URI", "AUTH_SERVICE_URL", "PERSISTENCE_BASE_URL"], name)
     },
+    {
+      for name, secret in data.infisical_secrets.broker.secrets :
+      name => secret.value
+      if contains(["RABBITMQ_USER", "RABBITMQ_PASSWORD"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.auth.secrets :
+      name => secret.value
+      if contains(["SERVICE_JWT_SECRET", "SERVICE_CLIENT_SECRET"], name)
+    },
+    # Redis da presença: usa o usuário próprio do messenger quando ele existir
+    # no Infisical e, até lá, o da mesma instância Upstash do api-core.
+    {
+      UPSTASH_MESSENGER_HOST     = try(data.infisical_secrets.redis.secrets["UPSTASH_MESSENGER_HOST"].value, data.infisical_secrets.redis.secrets["UPSTASH_CORE_HOST"].value)
+      UPSTASH_MESSENGER_PORT     = try(data.infisical_secrets.redis.secrets["UPSTASH_MESSENGER_PORT"].value, data.infisical_secrets.redis.secrets["UPSTASH_CORE_PORT"].value)
+      UPSTASH_MESSENGER_USERNAME = try(data.infisical_secrets.redis.secrets["UPSTASH_MESSENGER_USERNAME"].value, data.infisical_secrets.redis.secrets["UPSTASH_CORE_USERNAME"].value)
+      UPSTASH_MESSENGER_PASSWORD = try(data.infisical_secrets.redis.secrets["UPSTASH_MESSENGER_PASSWORD"].value, data.infisical_secrets.redis.secrets["UPSTASH_CORE_PASSWORD"].value)
+    },
   )
 
   type = "Opaque"
@@ -171,9 +189,12 @@ resource "kubernetes_secret" "api_core" {
       if contains(["SERVICE_KEY_API_AUTH", "SERVICE_KEY_API_MESSENGER"], name)
     },
     {
+      API_EMAIL_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_EMAIL"].value
+    },
+    {
       for name, secret in data.infisical_secrets.service_urls.secrets :
       name => secret.value
-      if contains(["JWT_JWK_SET_URI"], name)
+      if contains(["JWT_JWK_SET_URI", "AUTH_SERVICE_URL"], name)
     },
   )
 
@@ -263,7 +284,7 @@ resource "kubernetes_secret" "api_recommendation" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
-# --- api-mcp (api-database-mcp) --------------------------------------------
+# --- mcp-database (ex-api-mcp) ---------------------------------------------
 # Reusa /database (Postgres "Negócio") e soma a pasta /mcp (chave de API
 # própria do serviço).
 
@@ -275,7 +296,7 @@ data "infisical_secrets" "mcp" {
 
 resource "kubernetes_secret" "api_mcp" {
   metadata {
-    name      = "api-mcp-secrets"
+    name      = "mcp-database-secrets"
     namespace = "default"
   }
 
@@ -441,6 +462,211 @@ resource "kubernetes_secret" "database_bootstrap" {
       if contains(["DB_NEO4J_URI", "DB_NEO4J_USER", "DB_NEO4J_PASSWORD", "DB_NEO4J_FEED"], name)
     },
   )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+# --- ai-accessibility -------------------------------------------------------
+# Só chaves de LLM e o token interno que o serviço exige no Bearer
+# (INTERNAL_API_TOKEN recebe a service key do ai-accessibility), sem banco.
+
+resource "kubernetes_secret" "ai_accessibility" {
+  metadata {
+    name      = "ai-accessibility-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      for name, secret in data.infisical_secrets.llm.secrets :
+      name => secret.value
+      if contains(["GEMINI_API_KEY", "GROQ_API_KEY"], name)
+    },
+    {
+      INTERNAL_API_TOKEN = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_AI_ACCESSIBILITY"].value
+      JWT_JWKS_URL       = data.infisical_secrets.service_urls.secrets["JWT_JWK_SET_URI"].value
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+# --- ai-geographic ----------------------------------------------------------
+# Mesmo desenho do ai-assistant (Mongo, Redis dos agentes, chaves de LLM) mais
+# o que é próprio do serviço: Maps (Grounding Lite), google-registry e a
+# delegação A2A ao ai-assistant. Renomeia as chaves do Infisical para os nomes
+# que o settings.py lê (MONGO_URI, UPSTASH_REDIS_*, JWT_JWKS_URL, SERVICE_KEY).
+
+resource "kubernetes_secret" "ai_geographic" {
+  metadata {
+    name      = "ai-geographic-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      MONGO_URI = data.infisical_secrets.database.secrets["DB_MONGO_URI"].value
+    },
+    {
+      UPSTASH_REDIS_HOST     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_HOST"].value
+      UPSTASH_REDIS_PORT     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PORT"].value
+      UPSTASH_REDIS_USERNAME = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_USERNAME"].value
+      UPSTASH_REDIS_PASSWORD = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PASSWORD"].value
+    },
+    {
+      for name, secret in data.infisical_secrets.llm.secrets :
+      name => secret.value
+      if contains(["GEMINI_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "LLM_MODEL_GEMINI", "LLM_MODEL_OPENAI", "LLM_PROVIDER_ORDER"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.google.secrets :
+      name => secret.value
+      if contains(["GOOGLE_MAPS_API_KEY", "MAPS_MCP_URL"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.service_urls.secrets :
+      name => secret.value
+      if contains(["API_MESSENGER_URL", "A2A_ASSISTANT_URL", "GOOGLE_REGISTRY_URL", "REGISTRY_CONSUMER_TOKEN"], name)
+    },
+    {
+      JWT_JWKS_URL = data.infisical_secrets.service_urls.secrets["JWT_JWK_SET_URI"].value
+      SERVICE_KEY  = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_AI_GEOGRAPHIC"].value
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+# --- ai-operational ---------------------------------------------------------
+# Mesmo desenho do ai-assistant, com o MCP do mcp-database (a MCP_URL vem do
+# Deployment, porque o valor do Infisical ainda usa o nome antigo api-mcp) e o
+# api-core, cuja URL também é fixada no Deployment.
+
+resource "kubernetes_secret" "ai_operational" {
+  metadata {
+    name      = "ai-operational-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      MONGO_URI = data.infisical_secrets.database.secrets["DB_MONGO_URI"].value
+    },
+    {
+      UPSTASH_REDIS_HOST     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_HOST"].value
+      UPSTASH_REDIS_PORT     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PORT"].value
+      UPSTASH_REDIS_USERNAME = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_USERNAME"].value
+      UPSTASH_REDIS_PASSWORD = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PASSWORD"].value
+    },
+    {
+      for name, secret in data.infisical_secrets.llm.secrets :
+      name => secret.value
+      if contains(["GEMINI_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "LLM_MODEL_GEMINI", "LLM_MODEL_OPENAI", "LLM_PROVIDER_ORDER"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.mcp.secrets :
+      name => secret.value
+      if contains(["MCP_API_KEY"], name)
+    },
+    {
+      API_MESSENGER_URL = data.infisical_secrets.service_urls.secrets["API_MESSENGER_URL"].value
+      JWT_JWKS_URL      = data.infisical_secrets.service_urls.secrets["JWT_JWK_SET_URI"].value
+      SERVICE_KEY       = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_AI_OPERATIONAL"].value
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+# --- api-email --------------------------------------------------------------
+# Serviço interno (ClusterIP, sem Ingress). A pasta /email guarda o provedor
+# (Brevo) e o remetente; a chave interna que os backends enviam em X-API-Key é a
+# service key do api-email, que o serviço lê como EMAIL_API_KEY.
+
+data "infisical_secrets" "email" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/email"
+}
+
+resource "kubernetes_secret" "api_email" {
+  metadata {
+    name      = "api-email-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      for name, secret in data.infisical_secrets.email.secrets :
+      name => secret.value
+      if contains(["BREVO_API_KEY", "EMAIL_FROM"], name)
+    },
+    {
+      EMAIL_API_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_EMAIL"].value
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+# --- infra-broker -----------------------------------------------------------
+# RabbitMQ com STOMP, relay do WebSocket do api-messenger. A pasta /broker tem
+# o usuário e a senha, que o api-messenger usa iguais; a imagem lê o usuário
+# inicial de RABBITMQ_DEFAULT_USER e RABBITMQ_DEFAULT_PASS.
+
+data "infisical_secrets" "broker" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/broker"
+}
+
+resource "kubernetes_secret" "infra_broker" {
+  metadata {
+    name      = "infra-broker-secrets"
+    namespace = "default"
+  }
+
+  data = {
+    RABBITMQ_DEFAULT_USER = data.infisical_secrets.broker.secrets["RABBITMQ_USER"].value
+    RABBITMQ_DEFAULT_PASS = data.infisical_secrets.broker.secrets["RABBITMQ_PASSWORD"].value
+  }
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
+# --- infra-grafana ----------------------------------------------------------
+# Imagem oficial do Grafana. A senha do administrador é gerada aqui e fica só
+# no state (terraform output -raw grafana_admin_password), porque a pasta do
+# Grafana ainda não existe no Infisical; se for criada, troque o
+# random_password por um data source dela.
+
+resource "random_password" "grafana_admin" {
+  length  = 32
+  special = false
+}
+
+resource "kubernetes_secret" "infra_grafana" {
+  metadata {
+    name      = "infra-grafana-secrets"
+    namespace = "default"
+  }
+
+  data = {
+    GF_SECURITY_ADMIN_USER     = "admin"
+    GF_SECURITY_ADMIN_PASSWORD = random_password.grafana_admin.result
+  }
 
   type = "Opaque"
 
