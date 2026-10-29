@@ -565,6 +565,39 @@ resource "kubernetes_secret" "ai_operational" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
+# --- api-email --------------------------------------------------------------
+# Serviço interno (ClusterIP, sem Ingress). A pasta /email guarda o provedor
+# (Brevo) e o remetente; a chave interna que os backends enviam em X-API-Key é a
+# service key do api-email, que o serviço lê como EMAIL_API_KEY.
+
+data "infisical_secrets" "email" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/email"
+}
+
+resource "kubernetes_secret" "api_email" {
+  metadata {
+    name      = "api-email-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      for name, secret in data.infisical_secrets.email.secrets :
+      name => secret.value
+      if contains(["BREVO_API_KEY", "EMAIL_FROM"], name)
+    },
+    {
+      EMAIL_API_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_EMAIL"].value
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
 # --- web-app ------------------------------------------------------------
 # Propositalmente sem kubernetes_secret: web-app é uma SPA estática (Vite +
 # nginx) - as VITE_* são embutidas no bundle em build time (npm run build),
