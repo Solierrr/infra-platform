@@ -80,6 +80,24 @@ resource "kubernetes_secret" "api_messenger" {
       name => secret.value
       if contains(["JWT_JWK_SET_URI", "AUTH_SERVICE_URL", "PERSISTENCE_BASE_URL"], name)
     },
+    {
+      for name, secret in data.infisical_secrets.broker.secrets :
+      name => secret.value
+      if contains(["RABBITMQ_USER", "RABBITMQ_PASSWORD"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.auth.secrets :
+      name => secret.value
+      if contains(["SERVICE_JWT_SECRET", "SERVICE_CLIENT_SECRET"], name)
+    },
+    # Redis da presença: usa o usuário próprio do messenger quando ele existir
+    # no Infisical e, até lá, o da mesma instância Upstash do api-core.
+    {
+      UPSTASH_MESSENGER_HOST     = try(data.infisical_secrets.redis.secrets["UPSTASH_MESSENGER_HOST"].value, data.infisical_secrets.redis.secrets["UPSTASH_CORE_HOST"].value)
+      UPSTASH_MESSENGER_PORT     = try(data.infisical_secrets.redis.secrets["UPSTASH_MESSENGER_PORT"].value, data.infisical_secrets.redis.secrets["UPSTASH_CORE_PORT"].value)
+      UPSTASH_MESSENGER_USERNAME = try(data.infisical_secrets.redis.secrets["UPSTASH_MESSENGER_USERNAME"].value, data.infisical_secrets.redis.secrets["UPSTASH_CORE_USERNAME"].value)
+      UPSTASH_MESSENGER_PASSWORD = try(data.infisical_secrets.redis.secrets["UPSTASH_MESSENGER_PASSWORD"].value, data.infisical_secrets.redis.secrets["UPSTASH_CORE_PASSWORD"].value)
+    },
   )
 
   type = "Opaque"
