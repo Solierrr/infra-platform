@@ -643,6 +643,33 @@ resource "kubernetes_secret" "infra_broker" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
+# --- infra-grafana ----------------------------------------------------------
+# Imagem oficial do Grafana. A senha do administrador é gerada aqui e fica só
+# no state (terraform output -raw grafana_admin_password), porque a pasta do
+# Grafana ainda não existe no Infisical; se for criada, troque o
+# random_password por um data source dela.
+
+resource "random_password" "grafana_admin" {
+  length  = 32
+  special = false
+}
+
+resource "kubernetes_secret" "infra_grafana" {
+  metadata {
+    name      = "infra-grafana-secrets"
+    namespace = "default"
+  }
+
+  data = {
+    GF_SECURITY_ADMIN_USER     = "admin"
+    GF_SECURITY_ADMIN_PASSWORD = random_password.grafana_admin.result
+  }
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
 # --- web-app ------------------------------------------------------------
 # Propositalmente sem kubernetes_secret: web-app é uma SPA estática (Vite +
 # nginx) - as VITE_* são embutidas no bundle em build time (npm run build),
