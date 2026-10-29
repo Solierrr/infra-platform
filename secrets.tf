@@ -474,6 +474,54 @@ resource "kubernetes_secret" "ai_accessibility" {
   depends_on = [google_container_node_pool.primary_nodes]
 }
 
+# --- ai-geographic ----------------------------------------------------------
+# Mesmo desenho do ai-assistant (Mongo, Redis dos agentes, chaves de LLM) mais
+# o que é próprio do serviço: Maps (Grounding Lite), google-registry e a
+# delegação A2A ao ai-assistant. Renomeia as chaves do Infisical para os nomes
+# que o settings.py lê (MONGO_URI, UPSTASH_REDIS_*, JWT_JWKS_URL, SERVICE_KEY).
+
+resource "kubernetes_secret" "ai_geographic" {
+  metadata {
+    name      = "ai-geographic-secrets"
+    namespace = "default"
+  }
+
+  data = merge(
+    {
+      MONGO_URI = data.infisical_secrets.database.secrets["DB_MONGO_URI"].value
+    },
+    {
+      UPSTASH_REDIS_HOST     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_HOST"].value
+      UPSTASH_REDIS_PORT     = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PORT"].value
+      UPSTASH_REDIS_USERNAME = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_USERNAME"].value
+      UPSTASH_REDIS_PASSWORD = data.infisical_secrets.redis.secrets["UPSTASH_AGENTS_PASSWORD"].value
+    },
+    {
+      for name, secret in data.infisical_secrets.llm.secrets :
+      name => secret.value
+      if contains(["GEMINI_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "LLM_MODEL_GEMINI", "LLM_MODEL_OPENAI", "LLM_PROVIDER_ORDER"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.google.secrets :
+      name => secret.value
+      if contains(["GOOGLE_MAPS_API_KEY", "MAPS_MCP_URL"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.service_urls.secrets :
+      name => secret.value
+      if contains(["API_MESSENGER_URL", "A2A_ASSISTANT_URL", "GOOGLE_REGISTRY_URL", "REGISTRY_CONSUMER_TOKEN"], name)
+    },
+    {
+      JWT_JWKS_URL = data.infisical_secrets.service_urls.secrets["JWT_JWK_SET_URI"].value
+      SERVICE_KEY  = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_AI_GEOGRAPHIC"].value
+    },
+  )
+
+  type = "Opaque"
+
+  depends_on = [google_container_node_pool.primary_nodes]
+}
+
 # --- web-app ------------------------------------------------------------
 # Propositalmente sem kubernetes_secret: web-app é uma SPA estática (Vite +
 # nginx) - as VITE_* são embutidas no bundle em build time (npm run build),
