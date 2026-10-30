@@ -80,3 +80,10 @@ provider "infisical" {
 provider "cloudflare" {
   api_token = module.vault.cloudflare_api_token
 }
+
+# Token mestre (User > API Tokens > Edit), criado à mão uma vez e guardado em
+# /infisical. Serve só para o módulo cloudflare-token gerir o token operacional.
+provider "cloudflare" {
+  alias     = "manager"
+  api_token = module.vault.cloudflare_token_manager
+}

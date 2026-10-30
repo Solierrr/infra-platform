@@ -18,3 +18,9 @@ output "grafana_admin_password" {
   value       = random_password.grafana_admin.result
   sensitive   = true
 }
+
+output "cloudflare_token_manager" {
+  description = "Token mestre da Cloudflare (API Tokens Edit), lido da pasta /infisical"
+  value       = data.infisical_secrets.root_credentials.secrets["CLOUDFLARE_TOKEN_MANAGER"].value
+  sensitive   = true
+}
