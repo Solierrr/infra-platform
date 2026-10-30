@@ -88,6 +88,35 @@ resource "google_compute_router_nat" "nat" {
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
+locals {
+  argocd_sso_enabled = var.argocd_oidc_issuer != ""
+
+  # Login único pelo Cloudflare Access. O login admin por senha continua ligado.
+  argocd_sso_values = local.argocd_sso_enabled ? yamlencode({
+    configs = {
+      cm = {
+        url = "https://argocd.${var.domain}"
+        "oidc.config" = yamlencode({
+          name            = "Cloudflare Access"
+          issuer          = var.argocd_oidc_issuer
+          clientID        = var.argocd_oidc_client_id
+          clientSecret    = "$oidc.cloudflare.clientSecret"
+          requestedScopes = ["openid", "email", "profile"]
+        })
+      }
+      rbac = {
+        "policy.default" = "role:readonly"
+        "policy.csv"     = join("\n", [for email in var.argocd_admin_emails : "g, ${email}, role:admin"])
+      }
+      secret = {
+        extra = {
+          "oidc.cloudflare.clientSecret" = var.argocd_oidc_client_secret
+        }
+      }
+    }
+  }) : ""
+}
+
 resource "helm_release" "argocd" {
   name             = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
@@ -95,6 +124,8 @@ resource "helm_release" "argocd" {
   version          = "10.4.2" # ArgoCD v3.5.2
   namespace        = "argocd"
   create_namespace = true
+
+  values = local.argocd_sso_enabled ? [local.argocd_sso_values] : []
 
   set = [
     {

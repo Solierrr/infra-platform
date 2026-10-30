@@ -90,3 +90,26 @@ resource "cloudflare_zero_trust_access_application" "gateway" {
 
   depends_on = [cloudflare_dns_record.access_proxied, cloudflare_dns_record.api_recommendation]
 }
+
+# Login único no Argo CD: este app SaaS faz o Cloudflare Access agir como
+# provedor OIDC do Argo CD. Quem já passou pelo Access (Google) entra no Argo CD
+# sem digitar usuário e senha.
+resource "cloudflare_zero_trust_access_application" "argocd_sso" {
+  count        = local.access_enabled ? 1 : 0
+  account_id   = data.cloudflare_zone.primary.account.id
+  name         = "argocd-sso"
+  type         = "saas"
+  allowed_idps = var.access_idp_ids
+
+  saas_app = {
+    auth_type     = "oidc"
+    redirect_uris = ["https://argocd.${var.domain}/auth/callback"]
+    grant_types   = ["authorization_code"]
+    scopes        = ["openid", "email", "profile"]
+  }
+
+  policies = [{
+    id         = cloudflare_zero_trust_access_policy.gateway[0].id
+    precedence = 1
+  }]
+}
