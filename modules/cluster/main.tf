@@ -3,7 +3,8 @@ resource "google_compute_network" "vpc" {
   auto_create_subnetworks = false
 }
 
-resource "google_compute_subnetwork" "subnet" {
+# Sem flow logs de propósito: o custo não compensa para um cluster efêmero.
+resource "google_compute_subnetwork" "subnet" { # NOSONAR
   name          = "solaria-subnet"
   ip_cidr_range = "10.0.0.0/24"
   region        = var.gcp_region
@@ -27,7 +28,8 @@ resource "google_container_cluster" "primary" {
   }
 
   private_cluster_config {
-    enable_private_nodes    = false
+    # Nós com IP público e control plane acessível, mas só pelo IP de master_authorized_networks_config.
+    enable_private_nodes    = false # NOSONAR
     enable_private_endpoint = false
   }
 
