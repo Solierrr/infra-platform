@@ -44,7 +44,7 @@ resource "google_container_node_pool" "primary_nodes" {
   cluster  = google_container_cluster.primary.name
   location = var.gcp_zone
 
-  node_count = 4
+  node_count = 6
 
   node_config {
     machine_type = "e2-medium"
@@ -100,17 +100,17 @@ resource "google_compute_address" "kong_ip" {
   region = var.gcp_region
 }
 
-# Zona já existente na Cloudflare (domínio comprado direto lá, DNS já
-# delegado) - só lida, nunca criada aqui.
+# Zona jÃ¡ existente na Cloudflare (domÃ­nio comprado direto lÃ¡, DNS jÃ¡
+# delegado) - sÃ³ lida, nunca criada aqui.
 data "cloudflare_zone" "primary" {
   filter = {
     name = var.domain
   }
 }
 
-# Wildcard apontando pro IP atual do Kong - cobre qualquer subdomínio
-# (argocd, api-auth, etc.) com um único registro, e se atualiza sozinho a
-# cada apply quando o cluster (e o IP) é recriado.
+# Wildcard apontando pro IP atual do Kong - cobre qualquer subdomÃ­nio
+# (argocd, api-auth, etc.) com um Ãºnico registro, e se atualiza sozinho a
+# cada apply quando o cluster (e o IP) Ã© recriado.
 resource "cloudflare_dns_record" "wildcard" {
   zone_id = data.cloudflare_zone.primary.zone_id
   name    = "*.${var.domain}"
@@ -120,14 +120,14 @@ resource "cloudflare_dns_record" "wildcard" {
   proxied = false
 }
 
-# O domínio raiz (apex) não é gerenciado aqui: ele é servido por um Worker do
+# O domÃ­nio raiz (apex) nÃ£o Ã© gerenciado aqui: ele Ã© servido por um Worker do
 # Cloudflare (custom domain), e o Cloudflare recusa criar um registro DNS sobre
-# um host que já pertence a um Worker (erro 81062). Os subdomínios (argocd,
-# api-auth etc.) são cobertos pelo wildcard acima.
+# um host que jÃ¡ pertence a um Worker (erro 81062). Os subdomÃ­nios (argocd,
+# api-auth etc.) sÃ£o cobertos pelo wildcard acima.
 
-# api-recommendation com proxy da Cloudflare - o registro próprio sobrepõe o
-# wildcard (que é DNS-only) só para este host, e o cache abaixo faz os feeds
-# públicos serem atendidos na borda sem chegar à origem.
+# api-recommendation com proxy da Cloudflare - o registro prÃ³prio sobrepÃµe o
+# wildcard (que Ã© DNS-only) sÃ³ para este host, e o cache abaixo faz os feeds
+# pÃºblicos serem atendidos na borda sem chegar Ã  origem.
 resource "cloudflare_dns_record" "api_recommendation" {
   zone_id = data.cloudflare_zone.primary.zone_id
   name    = "api-recommendation.${var.domain}"
@@ -137,12 +137,12 @@ resource "cloudflare_dns_record" "api_recommendation" {
   proxied = true
 }
 
-# A Cloudflare não cacheia respostas JSON por padrão. Esta regra cacheia só
-# /public/feeds/* e deixa a origem mandar no TTL (Cache-Control do serviço).
+# A Cloudflare nÃ£o cacheia respostas JSON por padrÃ£o. Esta regra cacheia sÃ³
+# /public/feeds/* e deixa a origem mandar no TTL (Cache-Control do serviÃ§o).
 resource "cloudflare_ruleset" "api_recommendation_cache" {
   zone_id     = data.cloudflare_zone.primary.zone_id
   name        = "api-recommendation public feeds cache"
-  description = "Cache dos feeds públicos do api-recommendation, respeitando o Cache-Control da origem"
+  description = "Cache dos feeds pÃºblicos do api-recommendation, respeitando o Cache-Control da origem"
   kind        = "zone"
   phase       = "http_request_cache_settings"
 
