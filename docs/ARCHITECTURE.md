@@ -68,3 +68,12 @@ Os alvos `plan`, `apply`, `destroy`, `toggle-nodes` e `check-environments` do `M
 ## Cloudflare Access
 
 `modules/cloudflare/access.tf` protege o Argo CD e o Grafana (host inteiro) e a documentação das APIs (`/swagger-ui*`, `/v3/api-docs*`, `/docs*`, `/redoc*` e `/openapi.json*`) com login pelo Google. Só é criado quando `access_allowed_emails` tem ao menos um e-mail. O app e a política que já existem no painel precisam ser importados antes do primeiro apply, para não duplicar.
+
+## Token da Cloudflare
+
+Dois tokens, com papéis separados:
+
+- Token mestre (`CLOUDFLARE_TOKEN_MANAGER`, pasta `/infisical` do Infisical): criado à mão uma vez em Profile, API Tokens, com a permissão User, API Tokens, Edit. Só o módulo `modules/cloudflare-token` o usa, por um provider com alias `manager`.
+- Token operacional (`CLOUDFLARE_API_TOKEN`, pasta `/cloudflare`): usado pelo Terraform e pelo cert-manager. `modules/cloudflare-token` gere as permissões dele (DNS Write, Zone Read e Cache Settings Write na zona; Access Apps and Policies e Identity Providers Read na conta) sem mudar o valor. O bloco `import` adota o token que já existia.
+
+Para rotacionar o mestre, crie outro no painel e troque o valor em `/infisical`.
