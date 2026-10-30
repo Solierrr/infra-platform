@@ -77,3 +77,7 @@ Dois tokens, com papéis separados:
 - Token operacional (`CLOUDFLARE_API_TOKEN`, pasta `/cloudflare`): usado pelo Terraform e pelo cert-manager. `modules/cloudflare-token` gere as permissões dele (DNS Write, Zone Read e Cache Settings Write na zona; Access Apps and Policies e Identity Providers Read na conta) sem mudar o valor. O bloco `import` adota o token que já existia.
 
 Para rotacionar o mestre, crie outro no painel e troque o valor em `/infisical`.
+
+## Saída fixa para a internet
+
+Os nós do node pool não têm IP público. A saída dos pods passa pelo Cloud NAT (`google_compute_router_nat.nat`) com o IP estático `google_compute_address.nat_ip`, exposto pela saída `nat_ip`. É esse IP que se libera no MongoDB Atlas e em outros serviços externos, e ele não muda quando os nós são trocados.

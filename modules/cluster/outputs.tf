@@ -24,3 +24,8 @@ output "node_pool_id" {
   description = "Usado pelo módulo vault para só criar os Secrets depois que os nós existem"
   value       = google_container_node_pool.primary_nodes.id
 }
+
+output "nat_ip" {
+  description = "IP fixo de saída dos pods (libere no MongoDB Atlas e em outros serviços externos)"
+  value       = google_compute_address.nat_ip.address
+}

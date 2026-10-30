@@ -48,6 +48,12 @@ resource "google_container_node_pool" "primary_nodes" {
 
   node_count = 6
 
+  # Nós sem IP público: a saída para a internet passa pelo Cloud NAT abaixo, com
+  # um IP fixo que dá para liberar em serviços externos (MongoDB Atlas, por exemplo).
+  network_config {
+    enable_private_nodes = true
+  }
+
   node_config {
     machine_type = "e2-medium"
     disk_size_gb = 30
@@ -57,6 +63,29 @@ resource "google_container_node_pool" "primary_nodes" {
       "https://www.googleapis.com/auth/cloud-platform",
     ]
   }
+
+  depends_on = [google_compute_router_nat.nat]
+}
+
+# IP fixo de saída dos pods. Reservado à parte para sobreviver à troca dos nós.
+resource "google_compute_address" "nat_ip" {
+  name   = "solaria-nat-ip"
+  region = var.gcp_region
+}
+
+resource "google_compute_router" "router" {
+  name    = "solaria-router"
+  region  = var.gcp_region
+  network = google_compute_network.vpc.id
+}
+
+resource "google_compute_router_nat" "nat" {
+  name                               = "solaria-nat"
+  router                             = google_compute_router.router.name
+  region                             = var.gcp_region
+  nat_ip_allocate_option             = "MANUAL_ONLY"
+  nat_ips                            = [google_compute_address.nat_ip.self_link]
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
 resource "helm_release" "argocd" {

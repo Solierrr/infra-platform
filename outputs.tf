@@ -35,3 +35,8 @@ output "grafana_admin_password" {
   value       = module.vault.grafana_admin_password
   sensitive   = true
 }
+
+output "nat_ip" {
+  description = "IP fixo de saída dos pods do cluster"
+  value       = module.cluster.nat_ip
+}
