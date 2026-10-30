@@ -2,6 +2,7 @@
 #   modules/cluster     rede, GKE, Kong, Argo CD e cert-manager
 #   modules/vault       leitura do Infisical e Secrets do cluster
 #   modules/cloudflare  DNS, cache e Cloudflare Access
+#   modules/cloudflare-token  token operacional da Cloudflare (permissões)
 # Os blocos moved no fim preservam o state de antes da divisão em módulos.
 
 module "vault" {
@@ -28,6 +29,20 @@ module "cloudflare" {
   access_allowed_emails   = var.access_allowed_emails
   access_idp_ids          = var.access_idp_ids
   access_session_duration = var.access_session_duration
+}
+
+module "cloudflare_token" {
+  source     = "./modules/cloudflare-token"
+  providers  = { cloudflare = cloudflare.manager }
+  zone_id    = module.cloudflare.zone_id
+  account_id = module.cloudflare.account_id
+}
+
+# Adota o token "Edit zone DNS" que já existia no painel (mesmo valor, que já
+# está no Infisical). Depois do primeiro apply este bloco não faz mais nada.
+import {
+  to = module.cloudflare_token.cloudflare_api_token.operational
+  id = "95b0714a82dc26c67af9297941786eae"
 }
 
 moved {

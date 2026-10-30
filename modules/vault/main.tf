@@ -679,3 +679,11 @@ resource "kubernetes_secret" "infra_grafana" {
 # não lidas em runtime pelo container. A wiring com o Infisical acontece no
 # passo de build da imagem Docker (CI), não aqui no Terraform. Ver Fase 4/5
 # do plano em docs-warehouse/architecture.
+
+# Credenciais de partida do Terraform. O token mestre da Cloudflare mora aqui,
+# fora da pasta /cloudflare que o próprio Terraform administra.
+data "infisical_secrets" "root_credentials" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/infisical"
+}
