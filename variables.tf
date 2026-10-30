@@ -48,7 +48,7 @@ variable "infisical_project_id" {
 variable "access_allowed_emails" {
   type        = list(string)
   description = "E-mails autorizados a abrir as ferramentas de infra e a documentação das APIs pelo Cloudflare Access. Vazio não cria nenhum recurso do Access"
-  default     = ["solaria.innetwork@gmail.com"]
+  default     = ["solaria.innetwork@gmail.com", "doasilva2009@hotmail.com"]
 }
 
 variable "access_idp_ids" {
