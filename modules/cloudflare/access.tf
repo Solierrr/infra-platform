@@ -54,7 +54,7 @@ resource "cloudflare_dns_record" "access_proxied" {
   zone_id  = data.cloudflare_zone.primary.zone_id
   name     = "${each.value}.${var.domain}"
   type     = "A"
-  content  = google_compute_address.kong_ip.address
+  content  = var.kong_ip
   ttl      = 1
   proxied  = true
 }

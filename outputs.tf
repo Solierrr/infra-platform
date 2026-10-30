@@ -1,23 +1,23 @@
 output "vpc_id" {
-  value = google_compute_network.vpc.id
+  value = module.cluster.vpc_id
 }
 
 output "kong_ip" {
   description = "IP público do Kong - muda a cada recriação do cluster, usado pra atualizar os hosts sslip.io no infra-gitops"
-  value       = google_compute_address.kong_ip.address
+  value       = module.cluster.kong_ip
 }
 
 output "gke_cluster_name" {
-  value = google_container_cluster.primary.name
+  value = module.cluster.name
 }
 
 output "gke_cluster_endpoint" {
-  value = google_container_cluster.primary.endpoint
+  value = module.cluster.endpoint
 }
 
 output "kubectl_config_command" {
   description = "Run this to point kubectl at the new cluster"
-  value       = "gcloud container clusters get-credentials ${google_container_cluster.primary.name} --zone ${var.gcp_zone} --project ${var.gcp_project_id}"
+  value       = "gcloud container clusters get-credentials ${module.cluster.name} --zone ${var.gcp_zone} --project ${var.gcp_project_id}"
 }
 
 output "argocd_admin_password_command" {
@@ -32,6 +32,6 @@ output "argocd_port_forward_command" {
 
 output "grafana_admin_password" {
   description = "Senha do usuário admin do Grafana (infra-grafana), gerada pelo Terraform"
-  value       = random_password.grafana_admin.result
+  value       = module.vault.grafana_admin_password
   sensitive   = true
 }

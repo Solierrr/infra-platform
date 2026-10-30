@@ -1,277 +1,196 @@
-resource "google_compute_network" "vpc" {
-  name                    = "solaria-vpc"
-  auto_create_subnetworks = false
+# Composição dos módulos. Cada módulo cuida de uma área:
+#   modules/cluster     rede, GKE, Kong, Argo CD e cert-manager
+#   modules/vault       leitura do Infisical e Secrets do cluster
+#   modules/cloudflare  DNS, cache e Cloudflare Access
+# Os blocos moved no fim preservam o state de antes da divisão em módulos.
+
+module "vault" {
+  source               = "./modules/vault"
+  infisical_project_id = var.infisical_project_id
+  cluster_ready        = module.cluster.node_pool_id
 }
 
-resource "google_compute_subnetwork" "subnet" {
-  name          = "solaria-subnet"
-  ip_cidr_range = "10.0.0.0/24"
-  region        = var.gcp_region
-  network       = google_compute_network.vpc.id
+module "cluster" {
+  source                     = "./modules/cluster"
+  gcp_zone                   = var.gcp_zone
+  gcp_region                 = var.gcp_region
+  authorized_ip_cidr         = var.authorized_ip_cidr
+  domain                     = var.domain
+  cloudflare_api_token       = module.vault.cloudflare_api_token
+  acme_email                 = module.vault.acme_email
+  argocd_admin_password_hash = module.vault.argocd_admin_password_hash
 }
 
-resource "google_container_cluster" "primary" {
-  name     = "solaria-gke"
-  location = var.gcp_zone
-
-  network    = google_compute_network.vpc.id
-  subnetwork = google_compute_subnetwork.subnet.id
-
-  remove_default_node_pool = true
-  initial_node_count       = 1
-
-  deletion_protection = false
-
-  logging_config {
-    enable_components = ["SYSTEM_COMPONENTS", "WORKLOADS"]
-  }
-
-  private_cluster_config {
-    enable_private_nodes    = false
-    enable_private_endpoint = false
-  }
-
-  master_authorized_networks_config {
-    cidr_blocks {
-      cidr_block   = var.authorized_ip_cidr
-      display_name = "solaria-machine"
-    }
-  }
+module "cloudflare" {
+  source                  = "./modules/cloudflare"
+  domain                  = var.domain
+  kong_ip                 = module.cluster.kong_ip
+  access_allowed_emails   = var.access_allowed_emails
+  access_idp_ids          = var.access_idp_ids
+  access_session_duration = var.access_session_duration
 }
 
-resource "google_container_node_pool" "primary_nodes" {
-  name     = "solaria-node-pool"
-  cluster  = google_container_cluster.primary.name
-  location = var.gcp_zone
-
-  node_count = 6
-
-  node_config {
-    machine_type = "e2-medium"
-    disk_size_gb = 30
-    disk_type    = "pd-standard"
-
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform",
-    ]
-  }
+moved {
+  from = google_compute_network.vpc
+  to   = module.cluster.google_compute_network.vpc
 }
 
-resource "helm_release" "argocd" {
-  name             = "argocd"
-  repository       = "https://argoproj.github.io/argo-helm"
-  chart            = "argo-cd"
-  version          = "10.4.2" # ArgoCD v3.5.2
-  namespace        = "argocd"
-  create_namespace = true
-
-  set = [
-    {
-      name  = "configs.params.server\\.insecure"
-      value = "true"
-    },
-    {
-      name  = "server.ingress.enabled"
-      value = "true"
-    },
-    {
-      name  = "server.ingress.ingressClassName"
-      value = "kong"
-    },
-    {
-      name  = "server.ingress.hostname"
-      value = "argocd.${var.domain}"
-    },
-    {
-      name  = "configs.secret.argocdServerAdminPassword"
-      value = data.infisical_secrets.terraform.secrets["ARGOCD_ADMIN_PASSWORD_HASH"].value
-    },
-    {
-      name  = "configs.secret.argocdServerAdminPasswordMtime"
-      value = "2026-09-01T00:00:00Z"
-    },
-  ]
-
-  depends_on = [google_container_node_pool.primary_nodes]
+moved {
+  from = google_compute_subnetwork.subnet
+  to   = module.cluster.google_compute_subnetwork.subnet
 }
 
-resource "google_compute_address" "kong_ip" {
-  name   = "solaria-kong-ip"
-  region = var.gcp_region
+moved {
+  from = google_container_cluster.primary
+  to   = module.cluster.google_container_cluster.primary
 }
 
-# Zona já existente na Cloudflare (domínio comprado direto lá, DNS já
-# delegado) - só lida, nunca criada aqui.
-data "cloudflare_zone" "primary" {
-  filter = {
-    name = var.domain
-  }
+moved {
+  from = google_container_node_pool.primary_nodes
+  to   = module.cluster.google_container_node_pool.primary_nodes
 }
 
-# Wildcard apontando pro IP atual do Kong - cobre qualquer subdomínio
-# (argocd, api-auth, etc.) com um único registro, e se atualiza sozinho a
-# cada apply quando o cluster (e o IP) é recriado.
-resource "cloudflare_dns_record" "wildcard" {
-  zone_id = data.cloudflare_zone.primary.zone_id
-  name    = "*.${var.domain}"
-  type    = "A"
-  content = google_compute_address.kong_ip.address
-  ttl     = 300
-  proxied = false
+moved {
+  from = helm_release.argocd
+  to   = module.cluster.helm_release.argocd
 }
 
-# O domínio raiz (apex) não é gerenciado aqui: ele é servido por um Worker do
-# Cloudflare (custom domain), e o Cloudflare recusa criar um registro DNS sobre
-# um host que já pertence a um Worker (erro 81062). Os subdomínios (argocd,
-# api-auth etc.) são cobertos pelo wildcard acima.
-
-# api-recommendation com proxy da Cloudflare - o registro próprio sobrepõe o
-# wildcard (que é DNS-only) só para este host, e o cache abaixo faz os feeds
-# públicos serem atendidos na borda sem chegar à origem.
-resource "cloudflare_dns_record" "api_recommendation" {
-  zone_id = data.cloudflare_zone.primary.zone_id
-  name    = "recommendation.${var.domain}"
-  type    = "A"
-  content = google_compute_address.kong_ip.address
-  ttl     = 1
-  proxied = true
+moved {
+  from = google_compute_address.kong_ip
+  to   = module.cluster.google_compute_address.kong_ip
 }
 
-# A Cloudflare não cacheia respostas JSON por padrão. Esta regra cacheia só
-# /public/feeds/* e deixa a origem mandar no TTL (Cache-Control do serviço).
-resource "cloudflare_ruleset" "api_recommendation_cache" {
-  zone_id     = data.cloudflare_zone.primary.zone_id
-  name        = "api-recommendation public feeds cache"
-  description = "Cache dos feeds públicos do api-recommendation, respeitando o Cache-Control da origem"
-  kind        = "zone"
-  phase       = "http_request_cache_settings"
-
-  rules = [{
-    action      = "set_cache_settings"
-    description = "Cacheia /public/feeds/* do api-recommendation"
-    enabled     = true
-    expression  = "(http.host eq \"recommendation.${var.domain}\" and starts_with(http.request.uri.path, \"/public/feeds/\"))"
-    action_parameters = {
-      cache       = true
-      edge_ttl    = { mode = "respect_origin" }
-      browser_ttl = { mode = "respect_origin" }
-      serve_stale = { disable_stale_while_updating = false }
-    }
-  }]
+moved {
+  from = helm_release.kong
+  to   = module.cluster.helm_release.kong
 }
 
-data "http" "kong_values_base" {
-  url = "https://raw.githubusercontent.com/Solierrr/infra-gateway/main/helm/values-base.yaml"
+moved {
+  from = helm_release.cert_manager
+  to   = module.cluster.helm_release.cert_manager
 }
 
-data "http" "kong_values_dev" {
-  url = "https://raw.githubusercontent.com/Solierrr/infra-gateway/main/helm/values-dev.yaml"
+moved {
+  from = kubernetes_secret.cloudflare_api_token
+  to   = module.cluster.kubernetes_secret.cloudflare_api_token
 }
 
-resource "helm_release" "kong" {
-  name             = "kong"
-  repository       = "https://charts.konghq.com"
-  chart            = "kong"
-  version          = "3.4.1" # Kong 3.9.3
-  namespace        = "solier-dev"
-  create_namespace = true
-
-  values = [
-    data.http.kong_values_base.response_body,
-    data.http.kong_values_dev.response_body,
-  ]
-
-  set = [
-    {
-      name  = "proxy.type"
-      value = "LoadBalancer"
-    },
-    {
-      name  = "proxy.loadBalancerIP"
-      value = google_compute_address.kong_ip.address
-    },
-    {
-      name  = "proxy.tls.enabled"
-      value = "true"
-    },
-  ]
-
-  depends_on = [google_container_node_pool.primary_nodes]
+moved {
+  from = kubectl_manifest.letsencrypt_prod_issuer
+  to   = module.cluster.kubectl_manifest.letsencrypt_prod_issuer
 }
 
-resource "helm_release" "cert_manager" {
-  name             = "cert-manager"
-  repository       = "https://charts.jetstack.io"
-  chart            = "cert-manager"
-  version          = "v1.16.2"
-  namespace        = "cert-manager"
-  create_namespace = true
-
-  set = [
-    {
-      name  = "crds.enabled"
-      value = "true"
-    },
-  ]
-
-  depends_on = [google_container_node_pool.primary_nodes]
+moved {
+  from = kubectl_manifest.letsencrypt_http01_issuer
+  to   = module.cluster.kubectl_manifest.letsencrypt_http01_issuer
 }
 
-resource "kubernetes_secret" "cloudflare_api_token" {
-  metadata {
-    name      = "cloudflare-api-token"
-    namespace = "cert-manager"
-  }
-
-  data = {
-    api-token = data.infisical_secrets.cloudflare.secrets["CLOUDFLARE_API_TOKEN"].value
-  }
-
-  type = "Opaque"
-
-  depends_on = [helm_release.cert_manager]
+moved {
+  from = cloudflare_dns_record.wildcard
+  to   = module.cloudflare.cloudflare_dns_record.wildcard
 }
 
-resource "kubectl_manifest" "letsencrypt_prod_issuer" {
-  yaml_body = <<-YAML
-    apiVersion: cert-manager.io/v1
-    kind: ClusterIssuer
-    metadata:
-      name: letsencrypt-prod
-    spec:
-      acme:
-        server: https://acme-v02.api.letsencrypt.org/directory
-        email: ${data.infisical_secrets.terraform.secrets["ACME_EMAIL"].value}
-        privateKeySecretRef:
-          name: letsencrypt-prod-account-key
-        solvers:
-          - dns01:
-              cloudflare:
-                apiTokenSecretRef:
-                  name: cloudflare-api-token
-                  key: api-token
-  YAML
-
-  depends_on = [helm_release.cert_manager, kubernetes_secret.cloudflare_api_token]
+moved {
+  from = cloudflare_dns_record.api_recommendation
+  to   = module.cloudflare.cloudflare_dns_record.api_recommendation
 }
 
-resource "kubectl_manifest" "letsencrypt_http01_issuer" {
-  yaml_body = <<-YAML
-    apiVersion: cert-manager.io/v1
-    kind: ClusterIssuer
-    metadata:
-      name: letsencrypt-prod-http01
-    spec:
-      acme:
-        server: https://acme-v02.api.letsencrypt.org/directory
-        email: ${data.infisical_secrets.terraform.secrets["ACME_EMAIL"].value}
-        privateKeySecretRef:
-          name: letsencrypt-prod-http01-account-key
-        solvers:
-          - http01:
-              ingress:
-                ingressClassName: kong
-  YAML
+moved {
+  from = cloudflare_ruleset.api_recommendation_cache
+  to   = module.cloudflare.cloudflare_ruleset.api_recommendation_cache
+}
 
-  depends_on = [helm_release.cert_manager]
+moved {
+  from = kubernetes_secret.api_messenger
+  to   = module.vault.kubernetes_secret.api_messenger
+}
+
+moved {
+  from = kubernetes_secret.api_notify
+  to   = module.vault.kubernetes_secret.api_notify
+}
+
+moved {
+  from = kubernetes_secret.api_core
+  to   = module.vault.kubernetes_secret.api_core
+}
+
+moved {
+  from = kubernetes_secret.api_auth
+  to   = module.vault.kubernetes_secret.api_auth
+}
+
+moved {
+  from = kubernetes_secret.api_auth_jwt_keystore
+  to   = module.vault.kubernetes_secret.api_auth_jwt_keystore
+}
+
+moved {
+  from = kubernetes_secret.api_recommendation
+  to   = module.vault.kubernetes_secret.api_recommendation
+}
+
+moved {
+  from = kubernetes_secret.api_mcp
+  to   = module.vault.kubernetes_secret.api_mcp
+}
+
+moved {
+  from = kubernetes_secret.ai_assistant
+  to   = module.vault.kubernetes_secret.ai_assistant
+}
+
+moved {
+  from = kubernetes_secret.ai_validation
+  to   = module.vault.kubernetes_secret.ai_validation
+}
+
+moved {
+  from = kubernetes_secret.google_registry
+  to   = module.vault.kubernetes_secret.google_registry
+}
+
+moved {
+  from = kubernetes_secret.feeddb
+  to   = module.vault.kubernetes_secret.feeddb
+}
+
+moved {
+  from = kubernetes_secret.database_bootstrap
+  to   = module.vault.kubernetes_secret.database_bootstrap
+}
+
+moved {
+  from = kubernetes_secret.ai_accessibility
+  to   = module.vault.kubernetes_secret.ai_accessibility
+}
+
+moved {
+  from = kubernetes_secret.ai_geographic
+  to   = module.vault.kubernetes_secret.ai_geographic
+}
+
+moved {
+  from = kubernetes_secret.ai_operational
+  to   = module.vault.kubernetes_secret.ai_operational
+}
+
+moved {
+  from = kubernetes_secret.api_email
+  to   = module.vault.kubernetes_secret.api_email
+}
+
+moved {
+  from = kubernetes_secret.infra_broker
+  to   = module.vault.kubernetes_secret.infra_broker
+}
+
+moved {
+  from = random_password.grafana_admin
+  to   = module.vault.random_password.grafana_admin
+}
+
+moved {
+  from = kubernetes_secret.infra_grafana
+  to   = module.vault.kubernetes_secret.infra_grafana
 }
