@@ -1,6 +1,6 @@
 # Arquitetura do Repositório
 
-Este repositório segue a arquitetura padrão de um projeto Terraform da organização: um conjunto de arquivos `.tf` na raiz, sem subpastas de módulo, já que o escopo é um único cluster GKE com seus recursos de rede e as instalações Helm/Kubernetes que rodam dentro dele. `main.tf` concentra os recursos de infraestrutura propriamente ditos (rede, cluster, node pool, ArgoCD, Kong, cert-manager e os `ClusterIssuer` do Let's Encrypt), `secrets.tf` concentra exclusivamente a distribuição de segredos de aplicação lidos do Infisical para dentro do cluster, e `variables.tf`/`versions.tf`/`output.tf` cuidam, respectivamente, de parâmetros de entrada, providers/backends e valores expostos após o `apply`. Os scripts em `scripts/` não fazem parte do plano do Terraform em si — são ferramentas PowerShell de apoio específicas da plataforma. As variáveis do Infisical vêm de `make vault`, o alvo padrão do Makefile da organização.
+Este repositório é um projeto Terraform com uma raiz de composição e três módulos locais em `modules/`, um por área: `cluster`, `vault` e `cloudflare`. O escopo é um único cluster GKE com seus recursos de rede, as instalações Helm/Kubernetes e a borda na Cloudflare.
 
 <p>
   <a href="https://github.com/syvixor/skills-icons">
@@ -8,12 +8,12 @@ Este repositório segue a arquitetura padrão de um projeto Terraform da organiz
   </a>
 </p>
 
-- **Infraestrutura como código monolítica**, sem módulos Terraform separados — todos os recursos vivem nos arquivos `.tf` da raiz, já que o escopo é um único cluster GKE, não uma plataforma multi-ambiente.
+- **Infraestrutura como código em módulos locais**, a raiz (`main.tf`) só liga três módulos: `modules/cluster` (rede, GKE, Kong, Argo CD e cert-manager), `modules/vault` (leitura do Infisical e Secrets do cluster) e `modules/cloudflare` (DNS, cache e Cloudflare Access). Os blocos `moved` em `main.tf` preservam o state de antes da divisão.
 - **Cluster efêmero**, o `google_container_node_pool.primary_nodes` é dimensionado sob demanda (inclusive para `node_count = 0`) via `scripts/toggle-nodes.ps1`, em vez de manter nodes ativos (e cobrando) o tempo todo.
-- **Segredos centralizados no Infisical**, `secrets.tf` não guarda nenhum valor sensível em texto puro — cada `kubernetes_secret` é montado a partir de `data.infisical_secrets` lidos do vault, por pasta/tecnologia, e distribuído para o serviço correspondente dentro do cluster.
+- **Segredos centralizados no Infisical**, `modules/vault` não guarda nenhum valor sensível em texto puro — cada `kubernetes_secret` é montado a partir de `data.infisical_secrets` lidos do vault, por pasta/tecnologia, e distribuído para o serviço correspondente dentro do cluster.
 - **Bootstrap de plataforma via Helm/kubectl**, o Terraform não só sobe o cluster, como também instala nele o ArgoCD (GitOps), o Kong (gateway/ingress) e o cert-manager (certificados TLS via Let's Encrypt), preparando o cluster para receber as demais aplicações.
 
-## Recursos definidos em `main.tf`
+## Recursos de `modules/cluster` e `modules/cloudflare`
 
 - `google_compute_network.vpc` e `google_compute_subnetwork.subnet`, a VPC dedicada (`solaria-vpc`) e a subnet (`solaria-subnet`) onde o cluster GKE roda.
 - `google_container_cluster.primary`, o cluster GKE (`solaria-gke`), com o node pool padrão removido (`remove_default_node_pool = true`) e controle de acesso ao control plane via `master_authorized_networks_config`, restrito ao IP definido em `var.authorized_ip_cidr`.
@@ -24,16 +24,16 @@ Este repositório segue a arquitetura padrão de um projeto Terraform da organiz
 - `helm_release.kong`, instalação do Kong como API Gateway/Ingress Controller, usando o IP reservado acima como `proxy.loadBalancerIP`.
 - `helm_release.cert_manager`, instalação do cert-manager, responsável por emitir e renovar certificados TLS no cluster.
 - `kubernetes_secret.cloudflare_api_token`, token da API do Cloudflare usado pelo cert-manager no desafio DNS-01.
-- `cloudflare_dns_record.api_recommendation` e `cloudflare_ruleset.api_recommendation_cache`, o registro com proxy da Cloudflare para `api-recommendation.<domínio>` (que sobrepõe o wildcard DNS-only) e a regra de cache que atende `/public/feeds/*` na borda respeitando o `Cache-Control` da origem. Exigem que o token da Cloudflare tenha permissão de editar regras de cache da zona.
+- `cloudflare_dns_record.api_recommendation` e `cloudflare_ruleset.api_recommendation_cache`, o registro com proxy da Cloudflare para `recommendation.<domínio>` (que sobrepõe o wildcard DNS-only) e a regra de cache que atende `/public/feeds/*` na borda respeitando o `Cache-Control` da origem. Exigem que o token da Cloudflare tenha permissão de editar regras de cache da zona.
 - `kubectl_manifest.letsencrypt_prod_issuer` e `kubectl_manifest.letsencrypt_http01_issuer`, os `ClusterIssuer` do Let's Encrypt (desafios DNS-01 via Cloudflare e HTTP-01 via Kong, respectivamente).
 
-## Propósito de `secrets.tf`
+## Propósito de `modules/vault`
 
 Concentra a ponte entre o vault [Infisical](https://infisical.com) (autenticado via Machine Identity `gke-sync`, configurada em `versions.tf`) e os `kubernetes_secret` consumidos pelos serviços da organização (`api-messenger`, `api-notify`, `api-core`, `api-auth`, `api-email`, `api-recommendation`, `mcp-database`, `ai-assistant`, `ai-accessibility`, `ai-geographic`, `ai-operational`, `ai-validation`, `google-registry`, `infra-broker`, `infra-grafana`, `feeddb` e `database-bootstrap`). Cada serviço tem um bloco próprio que lê uma ou mais pastas do Infisical (`/database`, `/redis`, `/cloudinary`, `/google`, `/auth`, `/llm`, `/feeddb`, etc.) via `data.infisical_secrets`, filtra ou combina (`merge`) só as chaves relevantes, e cria o `kubernetes_secret` correspondente no namespace `default`. A pasta `/feeddb` guarda as credenciais do Neo4j self-hosted (`DB_NEO4J_URI`, `DB_NEO4J_USER`, `DB_NEO4J_PASSWORD`, `DB_NEO4J_FEED`) e precisa existir no Infisical (env `prod`) antes do `plan`, porque `feeddb-secrets` e `database-bootstrap-secrets` leem dela; a primeira monta o `NEO4J_AUTH` do Neo4j e a segunda soma as chaves de Postgres do `/database` com as de Neo4j do `/feeddb` para o job de bootstrap do grafo. A pasta `/broker` (`RABBITMQ_USER` e `RABBITMQ_PASSWORD`) alimenta o `infra-broker` e o `api-messenger`, e a `/email` (`BREVO_API_KEY` e `EMAIL_FROM`) o `api-email`. O `infra-grafana` é a exceção inversa: a senha do administrador é gerada pelo `random_password.grafana_admin` e fica só no state (`terraform output -raw grafana_admin_password`), porque o Infisical ainda não tem uma pasta do Grafana. O `web-app` é a exceção documentada: por ser uma SPA estática, suas variáveis `VITE_*` são embutidas no bundle em build-time (no CI), não injetadas em runtime pelo Terraform.
 
 ## Papel dos scripts em `scripts/`
 
-- `toggle-nodes.ps1`, automatiza a escala do node pool: edita o `node_count` em `main.tf`, cria uma branch, comita, abre e faz merge de uma PR (`gh pr create` / `gh pr merge --admin`) e, opcionalmente (`-Apply`), roda `terraform apply -auto-approve` — garantindo que o state do Terraform nunca fique divergente do que está de fato aplicado.
+- `toggle-nodes.ps1`, automatiza a escala do node pool: edita o `node_count` em `modules/cluster/main.tf`, cria uma branch, comita, abre e faz merge de uma PR (`gh pr create` / `gh pr merge --admin`) e, opcionalmente (`-Apply`), roda `terraform apply -auto-approve` — garantindo que o state do Terraform nunca fique divergente do que está de fato aplicado.
 - `secrets.template.ps1`, template para o arquivo local `scripts/secrets.local.ps1` (ignorado pelo `.gitignore`), que exporta as variáveis `TF_VAR_*` consumidas pelo Terraform antes de um `plan`/`apply` — client ID/secret da Machine Identity `gke-sync` do Infisical (usada por `secrets.tf` pra buscar as credenciais reais de cada serviço em `env=prod`), a senha do ArgoCD, o token do Cloudflare e o e-mail do ACME. Não inclui mais credencial por serviço nem conversão de keystore `.p12` — isso já vem pronto do Infisical (`JWT_KEYSTORE_BASE64` em `/auth`).
 
 Os alvos `plan`, `apply`, `destroy`, `toggle-nodes` e `check-environments` do `Makefile` chamam os scripts PowerShell desta pasta e são a exceção ao Makefile padrão da organização (`docs-warehouse/templates/make/`), que não usa PowerShell.
@@ -49,11 +49,14 @@ Os alvos `plan`, `apply`, `destroy`, `toggle-nodes` e `check-environments` do `M
 ├── README.md
 ├── ARCHITECTURE.md
 ├── RUNNING.md
+├── modules/
+│   ├── cluster/
+│   ├── vault/
+│   └── cloudflare/
 ├── main.tf
-├── secrets.tf
 ├── variables.tf
 ├── versions.tf
-├── output.tf
+├── outputs.tf
 ├── .editorconfig
 ├── .gitattributes
 ├── .gitignore
@@ -61,3 +64,7 @@ Os alvos `plan`, `apply`, `destroy`, `toggle-nodes` e `check-environments` do `M
 ├── LICENSE
 └── ...
 ```
+
+## Cloudflare Access
+
+`modules/cloudflare/access.tf` protege o Argo CD e o Grafana (host inteiro) e a documentação das APIs (`/swagger-ui*`, `/v3/api-docs*`, `/docs*`, `/redoc*` e `/openapi.json*`) com login pelo Google. Só é criado quando `access_allowed_emails` tem ao menos um e-mail. O app e a política que já existem no painel precisam ser importados antes do primeiro apply, para não duplicar.

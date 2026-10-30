@@ -102,7 +102,7 @@ resource "kubernetes_secret" "api_messenger" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- api-notify -----------------------------------------------------------
@@ -139,7 +139,7 @@ resource "kubernetes_secret" "api_notify" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- api-core ---------------------------------------------------------
@@ -200,7 +200,7 @@ resource "kubernetes_secret" "api_core" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- api-auth -------------------------------------------------------------
@@ -234,7 +234,7 @@ resource "kubernetes_secret" "api_auth" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 resource "kubernetes_secret" "api_auth_jwt_keystore" {
@@ -249,7 +249,7 @@ resource "kubernetes_secret" "api_auth_jwt_keystore" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- api-recommendation ----------------------------------------------------
@@ -281,7 +281,7 @@ resource "kubernetes_secret" "api_recommendation" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- mcp-database (ex-api-mcp) ---------------------------------------------
@@ -311,7 +311,7 @@ resource "kubernetes_secret" "api_mcp" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- ai-assistant -----------------------------------------------------------
@@ -371,7 +371,7 @@ resource "kubernetes_secret" "ai_assistant" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- ai-validation ----------------------------------------------------------
@@ -387,7 +387,7 @@ resource "kubernetes_secret" "ai_validation" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- google-registry --------------------------------------------------------
@@ -415,7 +415,7 @@ resource "kubernetes_secret" "google_registry" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- feeddb e database-bootstrap ---------------------------------------------
@@ -441,7 +441,7 @@ resource "kubernetes_secret" "feeddb" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 resource "kubernetes_secret" "database_bootstrap" {
@@ -465,7 +465,7 @@ resource "kubernetes_secret" "database_bootstrap" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- ai-accessibility -------------------------------------------------------
@@ -492,7 +492,7 @@ resource "kubernetes_secret" "ai_accessibility" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- ai-geographic ----------------------------------------------------------
@@ -540,7 +540,7 @@ resource "kubernetes_secret" "ai_geographic" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- ai-operational ---------------------------------------------------------
@@ -583,7 +583,7 @@ resource "kubernetes_secret" "ai_operational" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- api-email --------------------------------------------------------------
@@ -616,7 +616,7 @@ resource "kubernetes_secret" "api_email" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- infra-broker -----------------------------------------------------------
@@ -643,7 +643,7 @@ resource "kubernetes_secret" "infra_broker" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- infra-grafana ----------------------------------------------------------
@@ -670,7 +670,7 @@ resource "kubernetes_secret" "infra_grafana" {
 
   type = "Opaque"
 
-  depends_on = [google_container_node_pool.primary_nodes]
+  depends_on = [var.cluster_ready]
 }
 
 # --- web-app ------------------------------------------------------------

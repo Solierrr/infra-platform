@@ -45,3 +45,20 @@ variable "infisical_project_id" {
   description = "Workspace ID do projeto Infisical (dashboard do Infisical -> Project Settings)"
   default     = "2296d19c-5f3b-41e1-afa3-fcde39966a71"
 }
+variable "access_allowed_emails" {
+  type        = list(string)
+  description = "E-mails autorizados a abrir as ferramentas de infra e a documentação das APIs pelo Cloudflare Access. Vazio não cria nenhum recurso do Access"
+  default     = []
+}
+
+variable "access_idp_ids" {
+  type        = list(string)
+  description = "IDs dos provedores de identidade do Zero Trust aceitos no login (hoje, o Google criado no painel)"
+  default     = ["ea1907c3-68d2-4132-8d22-5731327d53ff"]
+}
+
+variable "access_session_duration" {
+  type        = string
+  description = "Duração da sessão do Cloudflare Access depois do login"
+  default     = "8h"
+}
