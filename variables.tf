@@ -45,3 +45,8 @@ variable "infisical_project_id" {
   description = "Workspace ID do projeto Infisical (dashboard do Infisical -> Project Settings)"
   default     = "2296d19c-5f3b-41e1-afa3-fcde39966a71"
 }
+variable "argocd_access_emails" {
+  type        = list(string)
+  description = "E-mails autorizados a abrir o Argo CD pelo Cloudflare Access. Vazio mantém o Argo CD sem a camada do Access (nenhum recurso é criado)"
+  default     = []
+}
