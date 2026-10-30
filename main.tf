@@ -130,7 +130,7 @@ resource "cloudflare_dns_record" "wildcard" {
 # públicos serem atendidos na borda sem chegar à origem.
 resource "cloudflare_dns_record" "api_recommendation" {
   zone_id = data.cloudflare_zone.primary.zone_id
-  name    = "api-recommendation.${var.domain}"
+  name    = "recommendation.${var.domain}"
   type    = "A"
   content = google_compute_address.kong_ip.address
   ttl     = 1
@@ -150,7 +150,7 @@ resource "cloudflare_ruleset" "api_recommendation_cache" {
     action      = "set_cache_settings"
     description = "Cacheia /public/feeds/* do api-recommendation"
     enabled     = true
-    expression  = "(http.host eq \"api-recommendation.${var.domain}\" and starts_with(http.request.uri.path, \"/public/feeds/\"))"
+    expression  = "(http.host eq \"recommendation.${var.domain}\" and starts_with(http.request.uri.path, \"/public/feeds/\"))"
     action_parameters = {
       cache       = true
       edge_ttl    = { mode = "respect_origin" }
