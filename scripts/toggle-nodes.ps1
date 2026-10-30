@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-  Aumenta ou reduz a escala do pool de nós do GKE alterando o `node_count` no `main.tf`
+  Aumenta ou reduz a escala do pool de nós do GKE alterando o `node_count` em `modules/cluster/main.tf`
   e propaga essa alteração via git (branch, commit, PR, merge), de modo que
   o estado do Terraform nunca divirja do que está efetivamente aplicado.
 
@@ -31,8 +31,8 @@ $action = if ($NodeCount -eq 0) { "pause" } else { "resume" }
 $branch = "chore/scale-nodes-to-$NodeCount-$(Get-Date -Format 'yyyyMMddHHmmss')"
 git checkout -b $branch
 
-$mainTfPath = (Resolve-Path main.tf).Path
-$content = (Get-Content $mainTfPath -Raw) -replace 'node_count = \d+', "node_count = $NodeCount"
+$mainTfPath = (Resolve-Path modules/cluster/main.tf).Path
+$content = ([System.IO.File]::ReadAllText($mainTfPath, (New-Object System.Text.UTF8Encoding($false)))) -replace 'node_count = \d+', "node_count = $NodeCount"
 [System.IO.File]::WriteAllText($mainTfPath, $content, (New-Object System.Text.UTF8Encoding($false)))
 
 if (-not (git status --porcelain)) {
@@ -42,7 +42,7 @@ if (-not (git status --porcelain)) {
     exit 0
 }
 
-git add main.tf
+git add modules/cluster/main.tf
 git commit -m "chore: $action node pool (node_count = $NodeCount)"
 git push -u origin $branch
 
