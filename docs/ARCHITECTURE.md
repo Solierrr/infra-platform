@@ -81,3 +81,7 @@ Para rotacionar o mestre, crie outro no painel e troque o valor em `/infisical`.
 ## Saída fixa para a internet
 
 Os nós do node pool não têm IP público. A saída dos pods passa pelo Cloud NAT (`google_compute_router_nat.nat`) com o IP estático `google_compute_address.nat_ip`, exposto pela saída `nat_ip`. É esse IP que se libera no MongoDB Atlas e em outros serviços externos, e ele não muda quando os nós são trocados.
+
+## Login do Argo CD pelo Access
+
+O app `argocd-sso` (tipo SaaS, OIDC) faz o Cloudflare Access agir como provedor de identidade do Argo CD. O módulo `cloudflare` expõe o emissor e as credenciais, e o módulo `cluster` os coloca no Helm do Argo CD (`configs.cm.oidc.config`). Os e-mails de `access_allowed_emails` entram como `role:admin`; os demais ficam só com leitura. O login `admin` por senha continua ligado como acesso de emergência.

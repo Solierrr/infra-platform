@@ -20,6 +20,10 @@ module "cluster" {
   cloudflare_api_token       = module.vault.cloudflare_api_token
   acme_email                 = module.vault.acme_email
   argocd_admin_password_hash = module.vault.argocd_admin_password_hash
+  argocd_oidc_issuer         = module.cloudflare.argocd_oidc_issuer
+  argocd_oidc_client_id      = module.cloudflare.argocd_oidc_client_id
+  argocd_oidc_client_secret  = module.cloudflare.argocd_oidc_client_secret
+  argocd_admin_emails        = var.access_allowed_emails
 }
 
 module "cloudflare" {

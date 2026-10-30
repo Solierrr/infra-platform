@@ -26,3 +26,9 @@ variable "kong_ip" {
   type        = string
   description = "IP público do Kong para onde os registros DNS apontam"
 }
+
+variable "access_team_domain" {
+  type        = string
+  description = "Domínio da equipe do Zero Trust, usado no emissor OIDC do Argo CD"
+  default     = "long-hat-66b3.cloudflareaccess.com"
+}
