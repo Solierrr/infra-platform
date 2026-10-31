@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.1.0](https://github.com/Solierrr/infra-platform/compare/v1.0.0...v1.1.0) (2026-10-31)
+
+
+### Features
+
+* add a cloud nat with a fixed egress ip ([#92](https://github.com/Solierrr/infra-platform/issues/92)) ([2087a7c](https://github.com/Solierrr/infra-platform/commit/2087a7c643c6fa6f7d3b1932cb44d6e656802706))
+* add api-notify kubernetes secret ([#73](https://github.com/Solierrr/infra-platform/issues/73)) ([6909216](https://github.com/Solierrr/infra-platform/commit/69092167ec383435e375d40949168543733ba722))
+* add secrets for the new services ([#79](https://github.com/Solierrr/infra-platform/issues/79)) ([b125d43](https://github.com/Solierrr/infra-platform/commit/b125d43b2ad4b1c0174a961e08bf62487b7b4a9c))
+* create the otel collector namespace and grafana cloud secret ([#95](https://github.com/Solierrr/infra-platform/issues/95)) ([6aa2276](https://github.com/Solierrr/infra-platform/commit/6aa227681f245bcc51f79ac18fe53145934d7ce5))
+* deliver the telemetry settings to the service secrets ([#77](https://github.com/Solierrr/infra-platform/issues/77)) ([0f07fea](https://github.com/Solierrr/infra-platform/commit/0f07fead16f94631736c5a5fbd954d40fddc31ec))
+* disable the argocd admin password login ([#102](https://github.com/Solierrr/infra-platform/issues/102)) ([3e56af3](https://github.com/Solierrr/infra-platform/commit/3e56af3d7c3f439d803a2325f52e87a879f1feac))
+* give grafana the grafana cloud read credentials ([#97](https://github.com/Solierrr/infra-platform/issues/97)) ([373641d](https://github.com/Solierrr/infra-platform/commit/373641d1801c5d3cbf247168e549fd28011b8b87))
+* load the terraform credentials from infisical into a local env file ([#82](https://github.com/Solierrr/infra-platform/issues/82)) ([6dcb4a2](https://github.com/Solierrr/infra-platform/commit/6dcb4a2031db18de355a5314d76c08bb13b285c9))
+* manage the cloudflare operational token with terraform ([#90](https://github.com/Solierrr/infra-platform/issues/90)) ([fbecbcd](https://github.com/Solierrr/infra-platform/commit/fbecbcddd15a0696df101f08d12d9c4c2a8a0317))
+* manage the workers deploy token and read access ([#108](https://github.com/Solierrr/infra-platform/issues/108)) ([e90302a](https://github.com/Solierrr/infra-platform/commit/e90302a23def488922883bc03ad7583886e90ea0))
+* pass one llm key per provider to the ai services and drop the registry llm keys ([#68](https://github.com/Solierrr/infra-platform/issues/68)) ([0c3f194](https://github.com/Solierrr/infra-platform/commit/0c3f1943898df325457a78f2c95cedda16d17993))
+* read the extra access emails from infisical and limit the admin roles ([#101](https://github.com/Solierrr/infra-platform/issues/101)) ([5d712e2](https://github.com/Solierrr/infra-platform/commit/5d712e20d42a77a83ebf3a726e9859ecdf985ac5))
+* read the service keys into the kubernetes secrets ([#74](https://github.com/Solierrr/infra-platform/issues/74)) ([3ff3a83](https://github.com/Solierrr/infra-platform/commit/3ff3a832338b32059621b26e3b7cbf3f0f3e5461))
+* restrict the kong load balancer to the cloudflare edge ([#96](https://github.com/Solierrr/infra-platform/issues/96)) ([c0f5f2d](https://github.com/Solierrr/infra-platform/commit/c0f5f2db92af78c0f8f1f2eb26697cd13eb522b6))
+* sign in to argocd through cloudflare access ([#93](https://github.com/Solierrr/infra-platform/issues/93)) ([c8de8e0](https://github.com/Solierrr/infra-platform/commit/c8de8e0da5309819519a25131cdd087586ca3952))
+* split terraform into modules and protect infra tools with cloudflare access ([#89](https://github.com/Solierrr/infra-platform/issues/89)) ([4a43ad0](https://github.com/Solierrr/infra-platform/commit/4a43ad0698dacb5effd8e6c0e6f7f34fdb155e29))
+
+
+### Bug Fixes
+
+* send api-google telemetry to the collector ([#107](https://github.com/Solierrr/infra-platform/issues/107)) ([7091c91](https://github.com/Solierrr/infra-platform/commit/7091c91e72942e8b29c2265747a0f95053249fab))
+* send the messenger telemetry to the collector ([#98](https://github.com/Solierrr/infra-platform/issues/98)) ([4cd9eae](https://github.com/Solierrr/infra-platform/commit/4cd9eaef4e77a5fa2ce245b15d3e7f02d90416f9))
+* squash merge the node toggle pull request ([#100](https://github.com/Solierrr/infra-platform/issues/100)) ([6506294](https://github.com/Solierrr/infra-platform/commit/6506294b38d4ee9cf1d359e70615dd5b0c49b8a7))
+* stop managing the apex dns record that a worker owns ([#71](https://github.com/Solierrr/infra-platform/issues/71)) ([95127b1](https://github.com/Solierrr/infra-platform/commit/95127b1b3710c4b7c177b6af4682ae8c96c24881))
+* wire the email and telemetry settings into the service secrets ([#99](https://github.com/Solierrr/infra-platform/issues/99)) ([95b5da4](https://github.com/Solierrr/infra-platform/commit/95b5da4ad0162043bc9463b0ce56047f5a0e36e5))
+
 ## 1.0.0 (2026-10-15)
 
 
