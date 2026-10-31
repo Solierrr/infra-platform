@@ -96,7 +96,8 @@ O Service do Kong recebe `loadBalancerSourceRanges` com as faixas IPv4 da borda 
 
 ## Quem entra e com qual papel
 
-- `access_allowed_emails` (código) e `ACCESS_EXTRA_EMAILS` (pasta `/terraform` do Infisical, separados por vírgula) definem quem passa pelo Cloudflare Access. Os e-mails extras ficam no Infisical e não no código, porque este repositório é público.
-- `admin_emails` define quem é administrador do Argo CD e do Grafana. Quem está só no Access entra no Argo CD com leitura e no Grafana como visualizador.
+- O cadastro de desenvolvedores é o segredo `DEVS` da pasta `/team` do Infisical (JSON): `[{"email": "...", "phone": "5511999999999", "admin": true}]`. Só o e-mail é obrigatório. Ele fica no Infisical e não no código, porque este repositório é público.
+- Todo e-mail do cadastro passa pelo Cloudflare Access. Quem tem `"admin": true` é administrador do Argo CD e do Grafana; os demais entram no Argo CD com leitura e no Grafana como visualizador. O Terraform recusa o plano se ninguém tiver `admin`.
+- Os telefones saem do módulo `vault` na saída sensível `dev_phones` e são usados nos alertas por WhatsApp. Alterar o cadastro vale no próximo `terraform apply`.
 - O papel no Grafana vem de `GF_AUTH_JWT_ROLE_ATTRIBUTE_PATH`, montado pelo módulo `vault` no Secret `infra-grafana-secrets`; o manifesto do `infra-gitops` não o define.
 

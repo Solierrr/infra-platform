@@ -25,12 +25,25 @@ output "cloudflare_token_manager" {
   sensitive   = true
 }
 
-output "access_extra_emails" {
-  description = "E-mails extras do Cloudflare Access, lidos de ACCESS_EXTRA_EMAILS (separados por vírgula) na pasta /terraform. Ficam no Infisical para não irem a um repositório público"
-  # nonsensitive: o e-mail não é segredo (só não vai ao repositório) e o Terraform não aceita
-  # valor sensível como chave de for_each, que é como o módulo cloudflare decide o que criar
-  value = nonsensitive([
-    for email in split(",", try(data.infisical_secrets.terraform.secrets["ACCESS_EXTRA_EMAILS"].value, "")) :
-    trimspace(email) if trimspace(email) != ""
-  ])
+# nonsensitive: o e-mail não é segredo (só não vai ao repositório) e o Terraform não aceita valor
+# sensível como chave de for_each, que é como o módulo cloudflare decide o que criar
+output "dev_emails" {
+  description = "E-mails de todos os desenvolvedores do cadastro DEVS (pasta /team): quem passa pelo Cloudflare Access"
+  value       = nonsensitive(distinct(local.dev_emails))
+
+  precondition {
+    condition     = length(local.dev_admin_emails) > 0
+    error_message = "O cadastro DEVS precisa ter pelo menos um desenvolvedor com \"admin\": true, senão ninguém administra o Argo CD e o Grafana."
+  }
+}
+
+output "dev_admin_emails" {
+  description = "E-mails marcados como admin no cadastro DEVS: administradores do Argo CD e do Grafana"
+  value       = nonsensitive(distinct(local.dev_admin_emails))
+}
+
+output "dev_phones" {
+  description = "Telefones (só dígitos, com DDI) de quem recebe alerta por WhatsApp"
+  value       = distinct(local.dev_phones)
+  sensitive   = true
 }

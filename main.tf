@@ -8,7 +8,6 @@
 module "vault" {
   source               = "./modules/vault"
   infisical_project_id = var.infisical_project_id
-  grafana_admin_emails = var.admin_emails
   cluster_ready        = module.cluster.node_pool_id
 }
 
@@ -24,7 +23,7 @@ module "cluster" {
   argocd_oidc_issuer         = module.cloudflare.argocd_oidc_issuer
   argocd_oidc_client_id      = module.cloudflare.argocd_oidc_client_id
   argocd_oidc_client_secret  = module.cloudflare.argocd_oidc_client_secret
-  argocd_admin_emails        = var.admin_emails
+  argocd_admin_emails        = module.vault.dev_admin_emails
   kong_source_ranges         = module.cloudflare.edge_ipv4_cidrs
 }
 
@@ -32,7 +31,7 @@ module "cloudflare" {
   source                  = "./modules/cloudflare"
   domain                  = var.domain
   kong_ip                 = module.cluster.kong_ip
-  access_allowed_emails   = distinct(concat(var.access_allowed_emails, module.vault.access_extra_emails))
+  access_allowed_emails   = module.vault.dev_emails
   access_idp_ids          = var.access_idp_ids
   access_session_duration = var.access_session_duration
 }
