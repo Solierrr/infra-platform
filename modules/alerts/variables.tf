@@ -33,6 +33,12 @@ variable "grafana_url" {
   default     = "https://grafana.solarianetwork.site"
 }
 
+variable "email_api_url" {
+  type        = string
+  description = "Endereço do api-email que o worker chama para o e-mail do aviso"
+  default     = "https://email.solarianetwork.site"
+}
+
 variable "environment" {
   type        = string
   description = "Ambiente que gera alerta (rótulo deployment_environment)"
