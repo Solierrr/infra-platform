@@ -226,11 +226,14 @@ resource "kubernetes_secret" "api_auth" {
     { for name, secret in data.infisical_secrets.otel.secrets : name => secret.value },
     {
       SERVICE_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_AUTH"].value
+      # chave que o api-auth manda ao api-email (o api-email a recebe como EMAIL_API_KEY)
+      SERVICE_KEY_API_EMAIL = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_EMAIL"].value
     },
     {
       for name, secret in data.infisical_secrets.service_urls.secrets :
       name => secret.value
-      if contains(["PERSISTENCE_BASE_URL"], name)
+      # api-email e os links dos e-mails de verificação e recuperação de senha
+      if contains(["PERSISTENCE_BASE_URL", "EMAIL_SERVICE_URL", "AUTH_EMAIL_VERIFICATION_URL", "AUTH_EMAIL_RESET_URL"], name)
     },
   )
 
@@ -333,6 +336,7 @@ resource "kubernetes_secret" "ai_assistant" {
   }
 
   data = merge(
+    { for name, secret in data.infisical_secrets.otel.secrets : name => secret.value },
     # MONGO_URI (não DB_MONGO_URI) - settings.py aceita MONGO_URI/MONGODB_URI
     # via AliasChoices, nunca o prefixo DB_ usado na pasta compartilhada.
     {
@@ -481,6 +485,7 @@ resource "kubernetes_secret" "ai_accessibility" {
   }
 
   data = merge(
+    { for name, secret in data.infisical_secrets.otel.secrets : name => secret.value },
     {
       for name, secret in data.infisical_secrets.llm.secrets :
       name => secret.value
@@ -510,6 +515,7 @@ resource "kubernetes_secret" "ai_geographic" {
   }
 
   data = merge(
+    { for name, secret in data.infisical_secrets.otel.secrets : name => secret.value },
     {
       MONGO_URI = data.infisical_secrets.database.secrets["DB_MONGO_URI"].value
     },
@@ -557,6 +563,7 @@ resource "kubernetes_secret" "ai_operational" {
   }
 
   data = merge(
+    { for name, secret in data.infisical_secrets.otel.secrets : name => secret.value },
     {
       MONGO_URI = data.infisical_secrets.database.secrets["DB_MONGO_URI"].value
     },
