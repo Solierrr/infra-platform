@@ -96,6 +96,9 @@ locals {
     configs = {
       cm = {
         url = "https://argocd.${var.domain}"
+        # Só o SSO: o usuário admin por senha fica desligado. Se o SSO quebrar, o caminho de
+        # volta é remover esta linha e aplicar o Terraform (ou kubectl -n argocd edit configmap argocd-cm).
+        "admin.enabled" = "false"
         "oidc.config" = yamlencode({
           name            = "Cloudflare Access"
           issuer          = var.argocd_oidc_issuer
