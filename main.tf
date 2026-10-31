@@ -36,6 +36,16 @@ module "cloudflare" {
   access_session_duration = var.access_session_duration
 }
 
+module "alerts" {
+  source               = "./modules/alerts"
+  account_id           = module.cloudflare.account_id
+  cloudflare_api_token = module.vault.cloudflare_api_token
+  worker_secrets       = module.vault.alerts_worker_secrets
+
+  # Os segredos do Worker são gravados com o token operacional, que ganha Workers Scripts Write no módulo abaixo
+  depends_on = [module.cloudflare_token]
+}
+
 module "cloudflare_token" {
   source     = "./modules/cloudflare-token"
   providers  = { cloudflare = cloudflare.manager }

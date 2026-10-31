@@ -34,6 +34,13 @@ locals {
   dev_phones       = [for dev in local.devs : replace(dev.phone, "/[^0-9]/", "") if try(dev.phone, "") != ""]
 }
 
+# Credenciais do serviço de alertas (Jira) e do Grafana Cloud usadas pelo Terraform
+data "infisical_secrets" "alerts" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/alerts"
+}
+
 data "infisical_secrets" "database" {
   env_slug     = "prod"
   workspace_id = var.infisical_project_id

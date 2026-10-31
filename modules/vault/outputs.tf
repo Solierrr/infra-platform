@@ -47,3 +47,24 @@ output "dev_phones" {
   value       = distinct(local.dev_phones)
   sensitive   = true
 }
+
+output "alerts_grafana_url" {
+  description = "Endereço do stack do Grafana Cloud, lido de /alerts"
+  value       = data.infisical_secrets.alerts.secrets["GRAFANA_CLOUD_STACK_URL"].value
+  sensitive   = true
+}
+
+output "alerts_grafana_token" {
+  description = "Token da conta de serviço do Grafana Cloud que gerencia os alertas, lido de /alerts"
+  value       = data.infisical_secrets.alerts.secrets["GRAFANA_CLOUD_SA_TOKEN"].value
+  sensitive   = true
+}
+
+output "alerts_worker_secrets" {
+  description = "Segredos do worker-alerts lidos de /alerts (Jira), por nome"
+  value = {
+    for name in ["JIRA_BASE_URL", "JIRA_USER", "JIRA_API_TOKEN"] :
+    name => data.infisical_secrets.alerts.secrets[name].value
+  }
+  sensitive = true
+}
