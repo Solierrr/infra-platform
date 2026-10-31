@@ -20,9 +20,11 @@ locals {
       title    = "A01 Serviço sem dados"
       priority = "P1"
       category = "disponibilidade"
-      group    = "queda"
-      for      = "5m"
-      window   = 900
+      # Pausa planejada do cluster (D29): o Worker não abre ticket enquanto ephemerality.json marca o cluster inativo
+      silence_on_pause = true
+      group            = "queda"
+      for              = "5m"
+      window           = 900
       # Serviços vistos na última hora que não aparecem nos últimos 10 minutos
       expr      = <<-PROMQL
         count by (service_name, deployment_environment) (last_over_time(target_info{${local.env}}[1h]))
@@ -228,11 +230,14 @@ resource "grafana_rule_group" "alerts" {
     exec_err_state = "OK"
     is_paused      = false
 
-    labels = {
-      alert_id = each.key
-      priority = each.value.priority
-      category = each.value.category
-    }
+    labels = merge(
+      {
+        alert_id = each.key
+        priority = each.value.priority
+        category = each.value.category
+      },
+      lookup(each.value, "silence_on_pause", false) ? { silence_on_pause = "true" } : {}
+    )
 
     annotations = {
       summary     = each.value.summary
