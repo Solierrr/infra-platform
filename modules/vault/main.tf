@@ -80,6 +80,8 @@ resource "kubernetes_secret" "api_messenger" {
       name => secret.value
       if contains(["JWT_JWK_SET_URI", "AUTH_SERVICE_URL", "PERSISTENCE_BASE_URL"], name)
     },
+    # Telemetria: sem o endereço do coletor o serviço exporta para localhost:4318 e falha.
+    { for name, secret in data.infisical_secrets.otel.secrets : name => secret.value },
     {
       for name, secret in data.infisical_secrets.broker.secrets :
       name => secret.value
