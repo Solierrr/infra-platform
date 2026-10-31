@@ -112,3 +112,6 @@ planout
 
 # OCI API private key, if you keep a copy inside this folder
 *.pem
+
+# planos do Terraform: carregam o state anterior inteiro, com os segredos lidos do Infisical
+*.tfplan
