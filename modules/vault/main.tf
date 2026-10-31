@@ -411,6 +411,7 @@ resource "kubernetes_secret" "google_registry" {
 
   data = merge(
     { for name, secret in data.infisical_secrets.google.secrets : name => secret.value },
+    { for name, secret in data.infisical_secrets.otel.secrets : name => secret.value },
     {
       GOOGLE_KEY_MAPS        = data.infisical_secrets.google.secrets["GOOGLE_MAPS_API_KEY"].value
       GOOGLE_KEY_TRANSLATION = data.infisical_secrets.google.secrets["GOOGLE_TRANSLATE_API_KEY"].value
