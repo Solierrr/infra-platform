@@ -17,7 +17,7 @@ locals {
     access_apps_policies_write = "1e13c5124ca64b72b1969a67e8829049" # Access: Apps and Policies Write
     access_apps_policies_read  = "7ea222f6d5064cfa89ea366d7c1fee89" # Access: Apps and Policies Read
     access_idp_read            = "9c35051ed89842839a637f81448d8c7c" # Access: Identity Providers Read
-    workers_scripts_read       = "1a71c399035b4950a1bd1466bbe4f420" # Workers Scripts Read
+    workers_scripts_write      = "e086da7e2179491d91ee5f35b3ca210a" # Workers Scripts Write (gravar segredos do worker-alerts)
   }
 
   # Token só de publicação dos Workers (worker-failover, worker-docs e worker-alerts), usado pelos

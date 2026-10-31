@@ -30,6 +30,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5.0"
     }
+    grafana = {
+      source  = "grafana/grafana"
+      version = "~> 4.0"
+    }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.6"
@@ -86,4 +90,11 @@ provider "cloudflare" {
 provider "cloudflare" {
   alias     = "manager"
   api_token = module.vault.cloudflare_token_manager
+}
+
+# Grafana Cloud: conta de serviço guardada em /alerts, que o módulo alerts usa para criar o contact
+# point, a política e as regras de alerta.
+provider "grafana" {
+  url  = module.vault.alerts_grafana_url
+  auth = module.vault.alerts_grafana_token
 }
