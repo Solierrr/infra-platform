@@ -1,6 +1,6 @@
 # Ferramentas de infra e documentação das APIs atrás do Cloudflare Access, com
 # login pelo Google (provedor criado no painel do Zero Trust) e restrito aos
-# e-mails de var.access_allowed_emails. Sem e-mails na variável, nada abaixo é
+# e-mails do cadastro DEVS (Infisical, pasta /team). Sem e-mails no cadastro, nada abaixo é
 # criado.
 #
 # - Host inteiro: Argo CD e Grafana.

@@ -18,6 +18,22 @@ data "infisical_secrets" "terraform" {
   folder_path  = "/terraform"
 }
 
+# Cadastro de desenvolvedores (JSON em DEVS): [{"email": "...", "phone": "55...", "admin": true}].
+# Fica no Infisical porque o repositório é público; só o e-mail é obrigatório.
+data "infisical_secrets" "team" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/team"
+}
+
+locals {
+  devs = jsondecode(data.infisical_secrets.team.secrets["DEVS"].value)
+
+  dev_emails       = [for dev in local.devs : trimspace(dev.email)]
+  dev_admin_emails = [for dev in local.devs : trimspace(dev.email) if try(dev.admin, false)]
+  dev_phones       = [for dev in local.devs : replace(dev.phone, "/[^0-9]/", "") if try(dev.phone, "") != ""]
+}
+
 data "infisical_secrets" "database" {
   env_slug     = "prod"
   workspace_id = var.infisical_project_id
@@ -683,7 +699,7 @@ resource "kubernetes_secret" "infra_grafana" {
       # Quem passa pelo Cloudflare Access entra no Grafana; só os e-mails de administrador
       # recebem o papel Admin, os demais entram como Viewer. A lista fica aqui, e não no
       # manifesto, porque o repositório do GitOps é público.
-      GF_AUTH_JWT_ROLE_ATTRIBUTE_PATH = "contains([${join(", ", [for email in var.grafana_admin_emails : "'${email}'"])}], email) && 'Admin' || 'Viewer'"
+      GF_AUTH_JWT_ROLE_ATTRIBUTE_PATH = "contains([${join(", ", [for email in local.dev_admin_emails : "'${email}'"])}], email) && 'Admin' || 'Viewer'"
     },
     {
       for name, secret in data.infisical_secrets.grafana_cloud.secrets :
