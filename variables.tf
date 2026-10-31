@@ -62,3 +62,9 @@ variable "access_session_duration" {
   description = "Duração da sessão do Cloudflare Access depois do login"
   default     = "8h"
 }
+
+variable "admin_emails" {
+  type        = list(string)
+  description = "E-mails que entram como administradores no Argo CD e no Grafana. Quem está só no Access (access_allowed_emails ou ACCESS_EXTRA_EMAILS no Infisical) entra sem poderes de administrador"
+  default     = ["solaria.innetwork@gmail.com", "doasilva2009@hotmail.com"]
+}
