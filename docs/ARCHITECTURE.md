@@ -94,3 +94,9 @@ O OpenTelemetry Collector roda no namespace `solierrr` (o endereço `otel-collec
 
 O Service do Kong recebe `loadBalancerSourceRanges` com as faixas IPv4 da borda da Cloudflare, lidas de `data.cloudflare_ip_ranges` a cada plan. Quem chamar o IP do Kong direto, sem passar pela Cloudflare, é barrado pelo firewall do Google, então o Cloudflare Access passa a ser a única porta de entrada. Os certificados do `web-app` e do `grafana` usam o `letsencrypt-prod` (validação por DNS), porque a validação por HTTP exigiria abrir a porta 80 para todo mundo.
 
+## Quem entra e com qual papel
+
+- `access_allowed_emails` (código) e `ACCESS_EXTRA_EMAILS` (pasta `/terraform` do Infisical, separados por vírgula) definem quem passa pelo Cloudflare Access. Os e-mails extras ficam no Infisical e não no código, porque este repositório é público.
+- `admin_emails` define quem é administrador do Argo CD e do Grafana. Quem está só no Access entra no Argo CD com leitura e no Grafana como visualizador.
+- O papel no Grafana vem de `GF_AUTH_JWT_ROLE_ATTRIBUTE_PATH`, montado pelo módulo `vault` no Secret `infra-grafana-secrets`; o manifesto do `infra-gitops` não o define.
+
