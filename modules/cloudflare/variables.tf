@@ -32,3 +32,9 @@ variable "access_team_domain" {
   description = "Domínio da equipe do Zero Trust, usado no emissor OIDC do Argo CD"
   default     = "long-hat-66b3.cloudflareaccess.com"
 }
+
+variable "sandbox_origin" {
+  type        = string
+  description = "Hostname do Render que serve o portal do sandbox (QA); o registro sandbox aponta para ele"
+  default     = "web-sandbox-qa.onrender.com"
+}

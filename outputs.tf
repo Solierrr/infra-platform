@@ -46,3 +46,8 @@ output "workers_deploy_token" {
   value       = module.cloudflare_token.workers_deploy_token
   sensitive   = true
 }
+
+output "gateway_access_aud" {
+  description = "AUD do aplicativo gateway do Access (ACCESS_AUD do sandbox)"
+  value       = module.cloudflare.gateway_access_aud
+}
