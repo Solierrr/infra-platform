@@ -40,3 +40,9 @@ output "nat_ip" {
   description = "IP fixo de saída dos pods do cluster"
   value       = module.cluster.nat_ip
 }
+
+output "workers_deploy_token" {
+  description = "Token de publicação dos Workers (terraform output -raw workers_deploy_token)"
+  value       = module.cloudflare_token.workers_deploy_token
+  sensitive   = true
+}
