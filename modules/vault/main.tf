@@ -687,3 +687,46 @@ data "infisical_secrets" "root_credentials" {
   workspace_id = var.infisical_project_id
   folder_path  = "/infisical"
 }
+
+# Credenciais do Grafana Cloud para o OpenTelemetry Collector (namespace solierrr,
+# o mesmo que os serviços usam em OTEL_EXPORTER_OTLP_ENDPOINT). Ficam numa pasta
+# própria, e não em /otel, porque /otel é copiada para o Secret de todos os serviços.
+data "infisical_secrets" "grafana_cloud" {
+  env_slug     = "prod"
+  workspace_id = var.infisical_project_id
+  folder_path  = "/grafana-cloud"
+}
+
+locals {
+  grafana_cloud_ready = alltrue([
+    for key in ["GRAFANA_CLOUD_OTLP_ENDPOINT", "GRAFANA_CLOUD_OTLP_AUTH"] :
+    contains(keys(data.infisical_secrets.grafana_cloud.secrets), key)
+  ])
+}
+
+resource "kubernetes_namespace" "solierrr" {
+  metadata {
+    name = "solierrr"
+  }
+
+  depends_on = [var.cluster_ready]
+}
+
+# Sem as duas chaves em /grafana-cloud, o Secret não é criado e o coletor fica
+# esperando por ele (CreateContainerConfigError) sem derrubar o resto do apply.
+resource "kubernetes_secret" "grafana_cloud_otlp" {
+  count = local.grafana_cloud_ready ? 1 : 0
+
+  metadata {
+    name      = "grafana-cloud-otlp"
+    namespace = kubernetes_namespace.solierrr.metadata[0].name
+  }
+
+  data = {
+    GRAFANA_CLOUD_OTLP_ENDPOINT = data.infisical_secrets.grafana_cloud.secrets["GRAFANA_CLOUD_OTLP_ENDPOINT"].value
+    GRAFANA_CLOUD_OTLP_AUTH     = data.infisical_secrets.grafana_cloud.secrets["GRAFANA_CLOUD_OTLP_AUTH"].value
+  }
+
+  type = "Opaque"
+}
+

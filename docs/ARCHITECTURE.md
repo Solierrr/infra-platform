@@ -85,3 +85,8 @@ Os nós do node pool não têm IP público. A saída dos pods passa pelo Cloud N
 ## Login do Argo CD pelo Access
 
 O app `argocd-sso` (tipo SaaS, OIDC) faz o Cloudflare Access agir como provedor de identidade do Argo CD. O módulo `cloudflare` expõe o emissor e as credenciais, e o módulo `cluster` os coloca no Helm do Argo CD (`configs.cm.oidc.config`). Os e-mails de `access_allowed_emails` entram como `role:admin`; os demais ficam só com leitura. O login `admin` por senha continua ligado como acesso de emergência.
+
+## Coletor de telemetria
+
+O OpenTelemetry Collector roda no namespace `solierrr` (o endereço `otel-collector.solierrr.svc.cluster.local:4318` já está em `OTEL_EXPORTER_OTLP_ENDPOINT`), instalado pelo ArgoCD a partir do `infra-otel-collector`. O módulo `vault` cria o namespace e, quando a pasta `/grafana-cloud` do Infisical (prod) tem `GRAFANA_CLOUD_OTLP_ENDPOINT` e `GRAFANA_CLOUD_OTLP_AUTH`, o Secret `grafana-cloud-otlp` que o coletor lê. Essas chaves ficam fora de `/otel` porque essa pasta é copiada para o Secret de todos os serviços.
+
