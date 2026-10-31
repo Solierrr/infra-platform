@@ -35,6 +35,6 @@ variable "access_team_domain" {
 
 variable "sandbox_origin" {
   type        = string
-  description = "Hostname do Render que serve o portal do sandbox (QA); o registro sandbox aponta para ele"
-  default     = "web-sandbox-qa.onrender.com"
+  description = "Destino do registro qa no Render. O Render escolhe o serviço pelo domínio personalizado (qa é do web-sandbox), então o destino do CNAME é só o endereço de entrada dele"
+  default     = "web-app-ldi0.onrender.com"
 }

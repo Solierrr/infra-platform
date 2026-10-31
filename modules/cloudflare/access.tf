@@ -31,9 +31,9 @@ locals {
     validation     = ["/docs*", "/redoc*", "/openapi.json*"]
   }
 
-  # Hosts inteiros que não são do Kong: o portal do sandbox, hospedado no Render (QA). O registro
-  # aponta para o Render, e o servidor do sandbox confere o JWT do Access (ver README dele).
-  access_external_hosts = ["sandbox"]
+  # Hosts inteiros que não são do Kong: o portal do sandbox, hospedado no Render (QA) com o domínio
+  # personalizado qa. O servidor do sandbox confere o JWT do Access (ver README dele).
+  access_external_hosts = ["qa"]
 
   access_destinations = concat(
     [for host in concat(local.access_full_hosts, local.access_external_hosts) : "${host}.${var.domain}"],
@@ -63,10 +63,10 @@ resource "cloudflare_dns_record" "access_proxied" {
   proxied  = true
 }
 
-resource "cloudflare_dns_record" "sandbox" {
+resource "cloudflare_dns_record" "qa" {
   count   = local.access_enabled ? 1 : 0
   zone_id = data.cloudflare_zone.primary.zone_id
-  name    = "sandbox.${var.domain}"
+  name    = "qa.${var.domain}"
   type    = "CNAME"
   content = var.sandbox_origin
   ttl     = 1
@@ -102,7 +102,7 @@ resource "cloudflare_zero_trust_access_application" "gateway" {
     precedence = 1
   }]
 
-  depends_on = [cloudflare_dns_record.access_proxied, cloudflare_dns_record.api_recommendation, cloudflare_dns_record.sandbox]
+  depends_on = [cloudflare_dns_record.access_proxied, cloudflare_dns_record.api_recommendation, cloudflare_dns_record.qa]
 }
 
 # Login único no Argo CD: este app SaaS faz o Cloudflare Access agir como
