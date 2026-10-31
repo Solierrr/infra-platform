@@ -61,10 +61,17 @@ output "alerts_grafana_token" {
 }
 
 output "alerts_worker_secrets" {
-  description = "Segredos do worker-alerts lidos de /alerts (Jira), por nome"
-  value = {
-    for name in ["JIRA_BASE_URL", "JIRA_USER", "JIRA_API_TOKEN"] :
-    name => data.infisical_secrets.alerts.secrets[name].value
-  }
+  description = "Segredos do worker-alerts por nome: Jira (lido de /alerts), a chave do e-mail (de /service-keys) e os destinatários (do cadastro DEVS)"
+  value = merge(
+    {
+      for name in ["JIRA_BASE_URL", "JIRA_USER", "JIRA_API_TOKEN"] :
+      name => data.infisical_secrets.alerts.secrets[name].value
+    },
+    {
+      # E-mail do aviso: a chave do worker no api-email e os e-mails do cadastro DEVS (D32)
+      EMAIL_SERVICE_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_WORKER_ALERTS"].value
+      ALERT_EMAIL_TO    = join(",", distinct(local.dev_emails))
+    },
+  )
   sensitive = true
 }

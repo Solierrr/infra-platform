@@ -644,6 +644,8 @@ resource "kubernetes_secret" "api_email" {
     },
     {
       EMAIL_API_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_EMAIL"].value
+      # Chave própria do worker-alerts, que chama POST /emails para o aviso operacional
+      SERVICE_KEY_WORKER_ALERTS = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_WORKER_ALERTS"].value
     },
   )
 

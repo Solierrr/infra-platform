@@ -13,8 +13,9 @@ locals {
   secrets = merge(var.worker_secrets, {
     WEBHOOK_TOKEN     = random_password.webhook.result
     ALERT_GRAFANA_URL = var.grafana_url
+    EMAIL_API_URL     = var.email_api_url
   })
-  secret_names = toset(concat(nonsensitive(keys(var.worker_secrets)), ["WEBHOOK_TOKEN", "ALERT_GRAFANA_URL"]))
+  secret_names = toset(concat(nonsensitive(keys(var.worker_secrets)), ["WEBHOOK_TOKEN", "ALERT_GRAFANA_URL", "EMAIL_API_URL"]))
 }
 
 resource "terraform_data" "worker_secret" {
