@@ -110,6 +110,19 @@ resource "grafana_contact_point" "worker_alerts" {
   }
 }
 
+# Segundo contact point, só para a batida do heartbeat: não passa pelo caminho de tickets.
+resource "grafana_contact_point" "heartbeat" {
+  name = "worker-heartbeat"
+
+  webhook {
+    url                       = var.heartbeat_url
+    http_method               = "POST"
+    authorization_scheme      = "Bearer"
+    authorization_credentials = random_password.webhook.result
+    max_alerts                = 1
+  }
+}
+
 # Substitui a política padrão do stack: tudo vai para o worker-alerts. A cadência dos avisos fica aqui,
 # e não no Worker: repetição a cada 35 minutos (o Worker só cria ticket novo depois de 30).
 resource "grafana_notification_policy" "root" {
@@ -118,6 +131,86 @@ resource "grafana_notification_policy" "root" {
   group_wait      = "30s"
   group_interval  = "5m"
   repeat_interval = "35m"
+
+  # A batida do heartbeat tem rota própria e não continua para o caminho de tickets
+  policy {
+    matcher {
+      label = "heartbeat"
+      match = "="
+      value = "true"
+    }
+    contact_point   = grafana_contact_point.heartbeat.name
+    group_by        = ["alert_id"]
+    group_wait      = "0s"
+    group_interval  = "1m"
+    repeat_interval = "5m"
+  }
+}
+
+# Regra sempre disparando: o Grafana Cloud repete a notificação a cada 5 minutos, e o Worker
+# conta a ausência dessas batidas (mais de 15 minutos) como falha do caminho de alertas.
+resource "grafana_rule_group" "heartbeat" {
+  name             = "heartbeat"
+  folder_uid       = grafana_folder.alerts.uid
+  interval_seconds = 60
+
+  rule {
+    name           = "H00 Heartbeat"
+    condition      = "C"
+    for            = "0s"
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+
+    labels = {
+      heartbeat              = "true"
+      alert_id               = "H00"
+      priority               = "P5"
+      service_name           = "grafana-cloud"
+      deployment_environment = var.environment
+    }
+
+    annotations = {
+      summary     = "Heartbeat do Grafana Cloud"
+      description = "Regra sempre ativa; a ausência da batida no worker-alerts abre o incidente H01."
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = "__expr__"
+
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+
+      model = jsonencode({
+        refId      = "A"
+        type       = "math"
+        expression = "1"
+        datasource = { type = "__expr__", uid = "__expr__" }
+      })
+    }
+
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+
+      model = jsonencode({
+        refId      = "C"
+        type       = "threshold"
+        expression = "A"
+        datasource = { type = "__expr__", uid = "__expr__" }
+        conditions = [{
+          evaluator = { type = "gt", params = [0] }
+        }]
+      })
+    }
+  }
 }
 
 resource "grafana_rule_group" "alerts" {

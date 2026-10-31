@@ -38,3 +38,9 @@ variable "environment" {
   description = "Ambiente que gera alerta (rótulo deployment_environment)"
   default     = "prod"
 }
+
+variable "heartbeat_url" {
+  type        = string
+  description = "URL que recebe a batida do heartbeat (rota /heartbeat do Worker)"
+  default     = "https://alerts.solarianetwork.site/heartbeat"
+}
