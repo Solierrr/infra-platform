@@ -57,3 +57,9 @@ variable "argocd_admin_emails" {
   description = "E-mails que entram no Argo CD como administradores pelo SSO"
   default     = []
 }
+
+variable "kong_source_ranges" {
+  type        = list(string)
+  description = "Faixas de IP que podem chegar ao Kong (loadBalancerSourceRanges). Vazio deixa o Kong aberto a qualquer origem"
+  default     = []
+}

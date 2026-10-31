@@ -24,6 +24,7 @@ module "cluster" {
   argocd_oidc_client_id      = module.cloudflare.argocd_oidc_client_id
   argocd_oidc_client_secret  = module.cloudflare.argocd_oidc_client_secret
   argocd_admin_emails        = var.access_allowed_emails
+  kong_source_ranges         = module.cloudflare.edge_ipv4_cidrs
 }
 
 module "cloudflare" {
