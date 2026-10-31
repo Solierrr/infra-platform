@@ -46,7 +46,7 @@ git add modules/cluster/main.tf
 git commit -m "chore: $action node pool (node_count = $NodeCount)"
 git push -u origin $branch
 
-$title = "`[AUTO]` chore: scale node pool to $NodeCount"
+$title = "chore: scale the node pool to $NodeCount"
 $body = @"
 ## Objetivo
 
@@ -73,7 +73,7 @@ Closes #
 
 $prUrl = gh pr create --title $title --body $body
 $prNumber = ($prUrl -split '/')[-1]
-gh pr merge $prNumber --merge --admin
+gh pr merge $prNumber --squash --admin
 
 git checkout main
 git pull origin main
