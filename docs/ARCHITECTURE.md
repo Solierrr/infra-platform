@@ -84,7 +84,7 @@ Os nós do node pool não têm IP público. A saída dos pods passa pelo Cloud N
 
 ## Login do Argo CD pelo Access
 
-O app `argocd-sso` (tipo SaaS, OIDC) faz o Cloudflare Access agir como provedor de identidade do Argo CD. O módulo `cloudflare` expõe o emissor e as credenciais, e o módulo `cluster` os coloca no Helm do Argo CD (`configs.cm.oidc.config`). Os e-mails de `access_allowed_emails` entram como `role:admin`; os demais ficam só com leitura. O login `admin` por senha continua ligado como acesso de emergência.
+O app `argocd-sso` (tipo SaaS, OIDC) faz o Cloudflare Access agir como provedor de identidade do Argo CD. O módulo `cloudflare` expõe o emissor e as credenciais, e o módulo `cluster` os coloca no Helm do Argo CD (`configs.cm.oidc.config`). Os e-mails de `access_allowed_emails` entram como `role:admin`; os demais ficam só com leitura. O usuário `admin` por senha está desligado (`admin.enabled: "false"`): só o SSO entra. Se o SSO quebrar, o caminho de volta é remover essa linha em `modules/cluster/main.tf` e aplicar o Terraform.
 
 ## Coletor de telemetria
 
