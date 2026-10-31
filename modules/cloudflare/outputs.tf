@@ -19,3 +19,8 @@ output "argocd_oidc_client_secret" {
   value     = local.access_enabled ? cloudflare_zero_trust_access_application.argocd_sso[0].saas_app.client_secret : ""
   sensitive = true
 }
+
+output "edge_ipv4_cidrs" {
+  description = "Faixas IPv4 da borda da Cloudflare, a lista que o Kong aceita"
+  value       = data.cloudflare_ip_ranges.edge.ipv4_cidrs
+}

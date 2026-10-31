@@ -48,3 +48,8 @@ resource "cloudflare_ruleset" "api_recommendation_cache" {
   }]
 }
 
+# Faixas de IP da borda da Cloudflare, lidas da API oficial a cada plan. O Kong só
+# aceita conexões delas (loadBalancerSourceRanges), então o Cloudflare Access passa
+# a ser a única porta de entrada.
+data "cloudflare_ip_ranges" "edge" {}
+

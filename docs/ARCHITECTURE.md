@@ -90,3 +90,7 @@ O app `argocd-sso` (tipo SaaS, OIDC) faz o Cloudflare Access agir como provedor 
 
 O OpenTelemetry Collector roda no namespace `solierrr` (o endereço `otel-collector.solierrr.svc.cluster.local:4318` já está em `OTEL_EXPORTER_OTLP_ENDPOINT`), instalado pelo ArgoCD a partir do `infra-otel-collector`. O módulo `vault` cria o namespace e, quando a pasta `/grafana-cloud` do Infisical (prod) tem `GRAFANA_CLOUD_OTLP_ENDPOINT` e `GRAFANA_CLOUD_OTLP_AUTH`, o Secret `grafana-cloud-otlp` que o coletor lê. Essas chaves ficam fora de `/otel` porque essa pasta é copiada para o Secret de todos os serviços.
 
+## Kong só para a Cloudflare
+
+O Service do Kong recebe `loadBalancerSourceRanges` com as faixas IPv4 da borda da Cloudflare, lidas de `data.cloudflare_ip_ranges` a cada plan. Quem chamar o IP do Kong direto, sem passar pela Cloudflare, é barrado pelo firewall do Google, então o Cloudflare Access passa a ser a única porta de entrada. Os certificados do `web-app` e do `grafana` usam o `letsencrypt-prod` (validação por DNS), porque a validação por HTTP exigiria abrir a porta 80 para todo mundo.
+

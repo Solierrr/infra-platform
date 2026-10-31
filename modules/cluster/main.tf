@@ -188,10 +188,15 @@ resource "helm_release" "kong" {
   namespace        = "solier-dev"
   create_namespace = true
 
-  values = [
-    data.http.kong_values_base.response_body,
-    data.http.kong_values_dev.response_body,
-  ]
+  values = concat(
+    [
+      data.http.kong_values_base.response_body,
+      data.http.kong_values_dev.response_body,
+    ],
+    length(var.kong_source_ranges) > 0 ? [yamlencode({
+      proxy = { loadBalancerSourceRanges = var.kong_source_ranges }
+    })] : []
+  )
 
   set = [
     {
