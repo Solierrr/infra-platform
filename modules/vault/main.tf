@@ -663,10 +663,28 @@ resource "kubernetes_secret" "infra_grafana" {
     namespace = "default"
   }
 
-  data = {
-    GF_SECURITY_ADMIN_USER     = "admin"
-    GF_SECURITY_ADMIN_PASSWORD = random_password.grafana_admin.result
-  }
+  # Além do administrador, o Grafana recebe as credenciais de leitura do Grafana
+  # Cloud (a pasta /grafana-cloud) para as fontes de dados prometheus, loki e tempo.
+  # Só as chaves de leitura entram aqui, e não as de envio do coletor.
+  data = merge(
+    {
+      GF_SECURITY_ADMIN_USER     = "admin"
+      GF_SECURITY_ADMIN_PASSWORD = random_password.grafana_admin.result
+    },
+    {
+      for name, secret in data.infisical_secrets.grafana_cloud.secrets :
+      name => secret.value
+      if contains([
+        "GRAFANA_CLOUD_READ_TOKEN",
+        "GRAFANA_CLOUD_PROMETHEUS_URL",
+        "GRAFANA_CLOUD_PROMETHEUS_USER",
+        "GRAFANA_CLOUD_LOKI_URL",
+        "GRAFANA_CLOUD_LOKI_USER",
+        "GRAFANA_CLOUD_TEMPO_URL",
+        "GRAFANA_CLOUD_TEMPO_USER",
+      ], name)
+    },
+  )
 
   type = "Opaque"
 
