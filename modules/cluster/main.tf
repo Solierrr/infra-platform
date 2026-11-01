@@ -46,7 +46,7 @@ resource "google_container_node_pool" "primary_nodes" {
   cluster  = google_container_cluster.primary.name
   location = var.gcp_zone
 
-  node_count = 0
+  node_count = 6
 
   # Nós sem IP público: a saída para a internet passa pelo Cloud NAT abaixo, com
   # um IP fixo que dá para liberar em serviços externos (MongoDB Atlas, por exemplo).
