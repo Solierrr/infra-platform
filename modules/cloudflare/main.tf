@@ -13,10 +13,20 @@ resource "cloudflare_dns_record" "wildcard" {
   proxied = false
 }
 
-# O domínio raiz (apex) não é gerenciado aqui: ele é servido por um Worker do
-# Cloudflare (custom domain), e o Cloudflare recusa criar um registro DNS sobre
-# um host que já pertence a um Worker (erro 81062). Os subdomínios (argocd,
-# api-auth etc.) são cobertos pelo wildcard acima.
+# O domínio raiz (apex) é servido pelo Worker `worker-failover` por uma route (`solarianetwork.site/*`),
+# não por um domínio personalizado do Worker. A route só recebe tráfego se o registro do apex existir e
+# passar pelo proxy da Cloudflare; o conteúdo `100::` é o endereço de descarte que a Cloudflare indica
+# para hosts atendidos só por Worker (o mesmo de docs e alerts). Sem este registro o site não resolve.
+# Os subdomínios (argocd, api-auth etc.) são cobertos pelo wildcard acima.
+resource "cloudflare_dns_record" "apex" {
+  zone_id = data.cloudflare_zone.primary.zone_id
+  name    = var.domain
+  type    = "AAAA"
+  content = "100::"
+  ttl     = 1
+  proxied = true
+  comment = "Apex servido pelo worker-failover (route); proxied para a route receber o tráfego"
+}
 
 resource "cloudflare_dns_record" "api_recommendation" {
   zone_id = data.cloudflare_zone.primary.zone_id
