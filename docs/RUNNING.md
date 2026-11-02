@@ -1,111 +1,19 @@
-# Rodando o Projeto Localmente
-
-Este repositório é Terraform (IaC). Não há "servidor de desenvolvimento" — rodar localmente significa validar/planejar mudanças de infraestrutura antes de aplicá-las no Google Cloud. O fluxo local é sempre o mesmo: clonar, autenticar no GCP, carregar os segredos necessários na sessão do PowerShell, rodar `terraform plan` para revisar o diff, e só então `terraform apply`. Por causa do conceito de **cluster efêmero** adotado neste repositório, também é comum o fluxo inverso: usar o script `toggle-nodes.ps1` para zerar (ou restaurar) o node pool do GKE quando o cluster não está em uso, em vez de destruir e recriar toda a infraestrutura.
-
-<p>
-  <a href="https://github.com/syvixor/skills-icons">
-    <img src="https://skills.syvixor.com/api/icons?i=terraform,gcp,github,powershell" height="48" alt="Rodando o Projeto — Terraform">
-  </a>
+<p align="center">
+  <img src="../assets/readme/banners/terraform.png" alt="Terraform" width="100%">
 </p>
 
-## Possíveis Impedimentos
+# Validação e planejamento
 
-- **Terraform CLI instalado**, na versão travada em `.terraform.lock.hcl` (`>= 1.16.0`) — versões diferentes podem gerar diffs de provider inesperados.
-- **Acesso ao Google Cloud (`gcloud auth application-default login`)**, o provider Google do Terraform usa Application Default Credentials — sem isso, `terraform plan` falha na autenticação.
-- **Permissão de owner/editor no projeto GCP (`solaria-authenticator`)**, criar/alterar recursos de cluster (GKE, VPC, IAM) exige permissões elevadas, normalmente restritas a poucas pessoas na organização.
-- **`scripts/secrets.local.ps1` preenchido**, além do GCP, o Terraform depende de `TF_VAR_infisical_client_id`/`TF_VAR_infisical_client_secret` — sem eles, o `plan` falha pedindo os valores interativamente (ou o `make plan`/`make apply`/`make destroy` falha na hora de carregar o arquivo). O resto já vem direto do Infisical: hash do admin do ArgoCD e e-mail do ACME (pasta `/terraform`), token da Cloudflare (pasta `/cloudflare`) — nenhum precisa de variável local.
-- **`gh` (GitHub CLI) autenticado**, necessário apenas para quem for usar `scripts/toggle-nodes.ps1`, já que o script abre e faz merge de Pull Requests automaticamente.
-- **`terraform apply` é uma ação real e cobrada**, ao contrário de rodar uma aplicação localmente, aplicar este Terraform sobe recursos de verdade no Google Cloud (cluster GKE, nodes, IP público) — nunca rode `apply` sem antes revisar o `plan` com atenção.
+Use Terraform 1.16 ou superior, Google Cloud CLI, `kubectl`, Helm e PowerShell para os utilitários. O guia comum está em [TERRAFORM.md](https://github.com/Solierrr/docs-warehouse/blob/main/readme/running/TERRAFORM.md).
 
-## Atalhos via Makefile
+O `make vault` exporta a pasta `/infisical`, e o carregamento das credenciais está descrito em `scripts/ensure-secrets.ps1`, que considera o ambiente, o arquivo local e a sessão do operador. Os arquivos de credenciais nunca devem entrar no Git.
 
-<p>
-  <a href="https://github.com/syvixor/skills-icons">
-    <img src="https://skills.syvixor.com/api/icons?i=make" height="48" alt="Makefile">
-  </a>
-</p>
+| Comando | Efeito |
+|---|---|
+| `make install` | `terraform init -backend=false` |
+| `make build` | `terraform validate` |
+| `make lint` | Confere formatação recursiva |
+| `make test` | Não tem comando configurado |
+| `terraform plan` | Calcula alterações com as credenciais e o state selecionados |
 
-O `Makefile` na raiz embrulha os comandos mais usados deste repositório - nenhum deles substitui os passos abaixo, é só conveniência.
-
-```Comandos do Makefile
-make install-tools                        # instala terraform, gcloud sdk, gh, infisical e kubectl via winget
-make login                                # infisical login
-make init                                 # terraform init
-make plan                                 # terraform plan
-make apply                                # terraform apply
-make doctor                               # confirma as ferramentas necessárias (git e terraform) e a sessão do Infisical
-make install                              # terraform init -backend=false (só providers, para validar)
-make ci                                   # terraform fmt -check e terraform validate (rode make install antes)
-make toggle-nodes NODES=0                 # zera o node pool (pausa o cluster), abre e mergeia a PR
-make toggle-nodes NODES=2 APPLY=1         # restaura o node pool e já aplica
-```
-
-`make install`, `make lint`, `make build` e `make ci` seguem o Makefile padrão da organização (`docs-warehouse/templates/make/`) e não precisam de credenciais do GCP. `plan`, `apply`, `destroy`, `toggle-nodes` e `check-environments` são alvos próprios que chamam os scripts PowerShell de `scripts/`.
-
-## Instalação do Projeto
-
-### Iniciando o repositório com o Github
-
-<p>
-  <a href="https://github.com/syvixor/skills-icons">
-    <img src="https://skills.syvixor.com/api/icons?i=github,vscode" height="48" alt="Frameworks">
-  </a>
-</p>
-
-Clone o repositório e abra no VS Code (com a extensão HashiCorp Terraform para syntax highlighting e validação).
-
-```Comandos para clonar o repositório
-git clone https://github.com/Solierrr/infra-platform.git
-cd ./infra-platform
-code . -r
-```
-
-### Carregando os segredos locais
-
-<p>
-  <a href="https://github.com/syvixor/skills-icons">
-    <img src="https://skills.syvixor.com/api/icons?i=powershell" height="48" alt="Secrets">
-  </a>
-</p>
-
-`make plan`, `make apply` e `make destroy` chamam `scripts/ensure-secrets.ps1` sozinhos antes de rodar o Terraform: se `scripts/secrets.local.ps1` ainda não existir, o script pergunta o client ID/secret da Machine Identity `gke-sync` do Infisical direto no terminal (dashboard do Infisical → Project Settings → Identities → `gke-sync`) e cria o arquivo (já está no `.gitignore`) — é a única credencial que precisa ficar local, o resto o Terraform já lê direto do Infisical. Nas próximas vezes o arquivo já existe e o passo é pulado. Para trocar as credenciais, apague `scripts/secrets.local.ps1` e rode `make plan`/`apply`/`destroy` de novo.
-
-Se for rodar `terraform plan`/`apply`/`destroy` direto, sem passar pelo Makefile, carregue o arquivo manualmente na sessão do PowerShell (copiando `scripts/secrets.template.ps1` primeiro se ele ainda não existir):
-
-```Comando para carregar os segredos na sessão manualmente
-. .\scripts\secrets.local.ps1
-```
-
-### Validando e aplicando as mudanças
-
-<p>
-  <a href="https://github.com/syvixor/skills-icons">
-    <img src="https://skills.syvixor.com/api/icons?i=terraform" height="48" alt="Frameworks">
-  </a>
-</p>
-
-`terraform init` baixa os providers e configura o backend remoto do state — rode sempre que clonar o repositório ou trocar de branch com mudanças no backend.
-
-```Comandos para validar e aplicar mudanças
-terraform init
-terraform plan
-terraform apply
-```
-
-### Ligando e desligando o cluster (custo)
-
-<p>
-  <a href="https://github.com/syvixor/skills-icons">
-    <img src="https://skills.syvixor.com/api/icons?i=powershell,github" height="48" alt="Toggle de Nodes">
-  </a>
-</p>
-
-Para pausar o cluster (zerar o node pool sem destruir o control plane nem o IP do Kong) ou retomá-lo depois, use `scripts/toggle-nodes.ps1` em vez de editar `main.tf` na mão — o script já cuida de branch, commit, PR e (opcionalmente) do `terraform apply`.
-
-```Exemplos de uso do script de toggle
-# Zera o node pool (pausa o cluster) e abre/mergeia a PR, sem aplicar
-./scripts/toggle-nodes.ps1 -NodeCount 0
-
-# Restaura o node pool para 2 nodes e já aplica no Google Cloud
-./scripts/toggle-nodes.ps1 -NodeCount 2 -Apply
-```
+O CI inicializa sem backend e valida. A validação de sintaxe não comprova permissões nem disponibilidade de recursos. Os scripts operacionais podem alterar Git, fazer merge e aplicar recursos. Leia os efeitos em [DEPLOY.md](./DEPLOY.md) antes de usá-los no fluxo operacional do repositório de origem.
