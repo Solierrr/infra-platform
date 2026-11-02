@@ -211,15 +211,16 @@ resource "kubernetes_secret" "api_core" {
     {
       for name, secret in data.infisical_secrets.service_keys.secrets :
       name => secret.value
-      if contains(["SERVICE_KEY_API_AUTH", "SERVICE_KEY_API_MESSENGER", "MOBILE_SERVICE_TOKEN"], name)
+      if contains(["SERVICE_KEY_API_AUTH", "SERVICE_KEY_API_MESSENGER", "MOBILE_SERVICE_TOKEN", "SERVICE_KEY_MCP_DATABASE"], name)
     },
     {
       API_EMAIL_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_EMAIL"].value
+      SERVICE_KEY   = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_CORE"].value
     },
     {
       for name, secret in data.infisical_secrets.service_urls.secrets :
       name => secret.value
-      if contains(["JWT_JWK_SET_URI", "AUTH_SERVICE_URL"], name)
+      if contains(["JWT_JWK_SET_URI", "AUTH_SERVICE_URL", "GOOGLE_REGISTRY_URL"], name)
     },
   )
 
@@ -349,10 +350,19 @@ resource "kubernetes_secret" "api_mcp" {
   }
 
   data = merge(
+    # Sem credencial de banco: o catálogo vem do api-core (GET /internal/catalog/**) e os feeds da api-recommendation.
     {
-      for name, secret in data.infisical_secrets.database.secrets :
+      for name, secret in data.infisical_secrets.service_urls.secrets :
       name => secret.value
-      if contains(["DB_POSTGRES_HOST", "DB_POSTGRES_PORT", "DB_POSTGRES_USER", "DB_POSTGRES_PASSWORD", "DB_POSTGRES_BUSINESS"], name)
+      if contains(["PERSISTENCE_BASE_URL", "RECOMMENDATION_API_URL"], name)
+    },
+    {
+      for name, secret in data.infisical_secrets.service_keys.secrets :
+      name => secret.value
+      if contains(["SERVICE_KEY_AI_ASSISTANT", "SERVICE_KEY_AI_OPERATIONAL"], name)
+    },
+    {
+      SERVICE_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_MCP_DATABASE"].value
     },
     { for name, secret in data.infisical_secrets.mcp.secrets : name => secret.value },
   )
@@ -460,6 +470,11 @@ resource "kubernetes_secret" "google_registry" {
       GOOGLE_KEY_TRANSLATION = data.infisical_secrets.google.secrets["GOOGLE_TRANSLATE_API_KEY"].value
       JWT_JWKS_URL           = data.infisical_secrets.service_urls.secrets["JWT_JWK_SET_URI"].value
       AUTH_BASE_URL          = data.infisical_secrets.service_urls.secrets["AUTH_SERVICE_URL"].value
+    },
+    {
+      for name, secret in data.infisical_secrets.service_keys.secrets :
+      name => secret.value
+      if contains(["SERVICE_KEY_API_CORE", "SERVICE_KEY_AI_GEOGRAPHIC"], name)
     },
   )
 
@@ -582,7 +597,7 @@ resource "kubernetes_secret" "ai_geographic" {
     {
       for name, secret in data.infisical_secrets.service_urls.secrets :
       name => secret.value
-      if contains(["API_MESSENGER_URL", "A2A_ASSISTANT_URL", "GOOGLE_REGISTRY_URL", "REGISTRY_CONSUMER_TOKEN"], name)
+      if contains(["API_MESSENGER_URL", "A2A_ASSISTANT_URL", "GOOGLE_REGISTRY_URL"], name)
     },
     {
       JWT_JWKS_URL = data.infisical_secrets.service_urls.secrets["JWT_JWK_SET_URI"].value
