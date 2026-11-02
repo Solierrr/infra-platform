@@ -211,7 +211,7 @@ resource "kubernetes_secret" "api_core" {
     {
       for name, secret in data.infisical_secrets.service_keys.secrets :
       name => secret.value
-      if contains(["SERVICE_KEY_API_AUTH", "SERVICE_KEY_API_MESSENGER"], name)
+      if contains(["SERVICE_KEY_API_AUTH", "SERVICE_KEY_API_MESSENGER", "MOBILE_SERVICE_TOKEN"], name)
     },
     {
       API_EMAIL_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_EMAIL"].value
@@ -249,6 +249,8 @@ resource "kubernetes_secret" "api_auth" {
     { for name, secret in data.infisical_secrets.otel.secrets : name => secret.value },
     {
       SERVICE_KEY = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_AUTH"].value
+      # token com que o api-auth consulta a elegibilidade mobile no api-core
+      MOBILE_SERVICE_TOKEN = data.infisical_secrets.service_keys.secrets["MOBILE_SERVICE_TOKEN"].value
       # chave que o api-auth manda ao api-email (o api-email a recebe como EMAIL_API_KEY)
       SERVICE_KEY_API_EMAIL = data.infisical_secrets.service_keys.secrets["SERVICE_KEY_API_EMAIL"].value
     },
