@@ -31,7 +31,6 @@ O Terraform combina recursos do Google Cloud, Kubernetes, Helm, Infisical e Clou
 - [SECRETS.md](./docs/SECRETS.md), detalhes do fluxo ou modelo de dados.
 - [STATUS.md](./docs/STATUS.md), limites observados.
 - [Fluxos](./flows/), etapas e casos de erro do repositório.
-- [PENDENCIAS.md](./PENDENCIAS.md), questões para revisão.
 
 ## Contribuindo
 
