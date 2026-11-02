@@ -280,6 +280,24 @@ resource "kubernetes_secret" "api_auth_jwt_keystore" {
   depends_on = [var.cluster_ready]
 }
 
+# Credencial do Firebase Admin para o api-auth validar os ID tokens. Reusa o
+# service account já guardado em /fcm e entra no pod como arquivo, lido via
+# GOOGLE_APPLICATION_CREDENTIALS.
+resource "kubernetes_secret" "api_auth_firebase" {
+  metadata {
+    name      = "api-auth-firebase-credentials"
+    namespace = "default"
+  }
+
+  binary_data = {
+    "credentials.json" = data.infisical_secrets.fcm.secrets["FCM_CREDENTIALS_BASE64"].value
+  }
+
+  type = "Opaque"
+
+  depends_on = [var.cluster_ready]
+}
+
 # --- api-recommendation ----------------------------------------------------
 # Reusa /database (Postgres somente-leitura + Neo4j) e soma a pasta
 # /recommendation (chaves de API do motor de recomendação, não são
