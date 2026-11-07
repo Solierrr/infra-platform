@@ -19,7 +19,7 @@ flowchart LR
  H --> A[GitOps das aplicações]
 ```
 
-O módulo `modules/cluster/` cria a rede, o GKE, o pool, os endereços, o NAT e os releases Helm, e o `modules/vault/` lê o Infisical de produção e monta os Secrets. O `modules/cloudflare/` mantém o DNS, o cache e o Access, o `modules/cloudflare-token/` gerencia o token operacional e a pasta `scripts/` reúne os utilitários PowerShell.
+O módulo `modules/cluster/` cria a rede, o GKE, o pool, os endereços, o NAT e os releases Helm, e o `modules/vault/` lê o Infisical de produção e monta os Secrets. O `modules/media/` cria o bucket temporário da mídia das mensagens (apagado pelo ciclo de vida em 8 dias), a conta de serviço restrita a ele e o Secret com a chave que o api-messenger monta para assinar os links. O `modules/cloudflare/` mantém o DNS, o cache e o Access, o `modules/cloudflare-token/` gerencia o token operacional e a pasta `scripts/` reúne os utilitários PowerShell.
 
 O cluster usa um pool separado e o control plane limita acesso por faixa autorizada. O Kong usa endereço reservado e limita origens conforme faixas de borda. Seus valores base e dev são lidos por HTTP do repositório do gateway, com ajustes explícitos de LoadBalancer e TLS.
 

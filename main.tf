@@ -1,6 +1,7 @@
 # Composição dos módulos. Cada módulo cuida de uma área:
 #   modules/cluster     rede, GKE, Kong, Argo CD e cert-manager
 #   modules/vault       leitura do Infisical e Secrets do cluster
+#   modules/media       bucket temporário e conta de serviço da mídia das mensagens
 #   modules/cloudflare  DNS, cache e Cloudflare Access
 #   modules/cloudflare-token  token operacional da Cloudflare (permissões)
 # Os blocos moved no fim preservam o state de antes da divisão em módulos.
@@ -25,6 +26,13 @@ module "cluster" {
   argocd_oidc_client_secret  = module.cloudflare.argocd_oidc_client_secret
   argocd_admin_emails        = module.vault.dev_admin_emails
   kong_source_ranges         = module.cloudflare.edge_ipv4_cidrs
+}
+
+module "media" {
+  source          = "./modules/media"
+  gcp_project_id  = var.gcp_project_id
+  bucket_location = var.gcp_region
+  cluster_ready   = module.cluster.node_pool_id
 }
 
 module "cloudflare" {
